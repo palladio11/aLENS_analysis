@@ -10,12 +10,9 @@ import matplotlib.pyplot as plt
 import numba as nb
 import scipy.optimize as so
 
-
-# import argparse
-# parser = argparse.ArgumentParser()
-# args = parser.parse_args()
-
 import yaml
+
+# TODO: This script requires updates
 
 # read box from RunConfig.yaml
 config_file = open('../RunConfig.yaml', 'r')
