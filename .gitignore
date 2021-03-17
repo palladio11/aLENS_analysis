@@ -9,6 +9,7 @@ result/
 **.vtp
 **.yaml
 **.hdf5
+rdf_**/
 
 
 # Byte-compiled / optimized / DLL files
