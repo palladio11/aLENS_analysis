@@ -20,14 +20,14 @@ def getFrameNumber_lambda(filename): return int(
 
 
 def getFileListSorted(files, info=True):
-    SylinderFileList = glob.glob(files)
-    SylinderFileList.sort(key=getFrameNumber_lambda)
+    files = glob.glob(files)
+    files.sort(key=getFrameNumber_lambda)
     if info:
-        print(SylinderFileList)
-    return SylinderFileList
+        print(files)
+    return files
 
 
-def getAdjacencyMatrixFromPairs(pairs, N, info=False, save=False):
+def getAdjacencyMatrixFromPairs(pairs, N, info=False, save=False, symmetrize=True):
     '''pairs is a list of [i,j] pairs. 0<=i,j<N'''
     if info:
         print(len(pairs))
@@ -35,7 +35,8 @@ def getAdjacencyMatrixFromPairs(pairs, N, info=False, save=False):
     Npair = pairs.shape[0]  # number of pairs
     nbMat = ss.coo_matrix(
         (np.ones(Npair), (pairs[:, 0], pairs[:, 1])), shape=(N, N), dtype=np.int)
-    nbMat = (nbMat+nbMat.transpose())
+    if symmetrize:
+        nbMat = (nbMat+nbMat.transpose())
     if save:
         sio.mmwrite('nbMat.mtx', nbMat)
 
