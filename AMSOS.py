@@ -137,7 +137,7 @@ def calcCenterOrient(TList):
 class FrameAscii:
     '''Load Ascii.dat data'''
 
-    def __init__(self, filename, readProtein=False, sort=False, info=False):
+    def __init__(self, filename, readProtein=False, sort=True, info=False):
         self.filename = filename
         # MT
         data = np.loadtxt(filename,
