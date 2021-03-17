@@ -1,8 +1,11 @@
 import re
 import os
+import glob
 
 import numpy as np
 import scipy as sp
+import scipy.sparse as ss
+import scipy.io as sio
 
 import vtk
 import numba as nb
@@ -14,6 +17,29 @@ def get_basename(filename):
 
 def getFrameNumber_lambda(filename): return int(
     re.search('_([^_.]+)(?:\.[^_]*)?$', filename).group(1))
+
+
+def getFileListSorted(files, info=True):
+    SylinderFileList = glob.glob(files)
+    SylinderFileList.sort(key=getFrameNumber_lambda)
+    if info:
+        print(SylinderFileList)
+    return SylinderFileList
+
+
+def getAdjacencyMatrixFromPairs(pairs, N, info=False, save=False):
+    '''pairs is a list of [i,j] pairs. 0<=i,j<N'''
+    if info:
+        print(len(pairs))
+    pairs = pairs[np.logical_and(pairs[:, 0] >= 0, pairs[:, 1] >= 0)]
+    Npair = pairs.shape[0]  # number of pairs
+    nbMat = ss.coo_matrix(
+        (np.ones(Npair), (pairs[:, 0], pairs[:, 1])), shape=(N, N), dtype=np.int)
+    nbMat = (nbMat+nbMat.transpose())
+    if save:
+        sio.mmwrite('nbMat.mtx', nbMat)
+
+    return nbMat
 
 
 @nb.njit(parallel=True)

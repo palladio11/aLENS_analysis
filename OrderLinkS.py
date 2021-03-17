@@ -1,14 +1,8 @@
-import sys
-import vtk
 import glob
-import re
-import os
 
 import numba as nb
 import numpy as np
 import scipy as sp
-import scipy.sparse as ss
-import scipy.io as sio
 import h5py
 
 import AMSOS as am
@@ -20,17 +14,12 @@ h5data.close()
 
 
 def calcOrder(pairs, orients):
-    print(len(pairs))
-    pairs = pairs[np.logical_and(pairs[:, 0] >= 0, pairs[:, 1] >= 0)]
+
     N = orients.shape[0]  # number of rods
     Npair = pairs.shape[0]  # number of pairs
     print(N, Npair)
 
-    # adjacency matrix
-    nbMat = ss.coo_matrix(
-        (np.ones(Npair), (pairs[:, 0], pairs[:, 1])), shape=(N, N), dtype=np.int)
-    nbMat = (nbMat+nbMat.transpose())
-    # sio.mmwrite('nbMat.mtx', nbMat)
+    nbMat = am.getAdjacencyMatrixFromPairs(pairs, N)
 
     order = np.zeros((N, 2))
     for id in nb.prange(N):
@@ -38,7 +27,6 @@ def calcOrder(pairs, orients):
         nnz = nbMat.getrow(id).nonzero()
         neighbors = np.append(nnz[1], id)
         PList_local = orients[neighbors]
-        # print(PList_local)
 
         S = am.calcNematicS(PList_local)
         order[id, 0] = S  # nematic order S
@@ -57,11 +45,9 @@ def calcLinkOrderS(TList, PList):
 
 
 def main():
+    SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
 
-    SylinderFileList = glob.glob('./result*/SylinderAscii_*.dat')
-    SylinderFileList.sort(key=am.getFrameNumber_lambda)
-    print(SylinderFileList)
-    for file in SylinderFileList[:1]:
+    for file in SylinderFileList:
         frame = am.FrameAscii(file, readProtein=True, sort=True, info=True)
         order = calcLinkOrderS(frame.TList, frame.PList)
         print(order)
