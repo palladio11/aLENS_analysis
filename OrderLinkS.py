@@ -13,12 +13,6 @@ import h5py
 
 import AMSOS as am
 
-pbcL = 600  # um
-pbcY = 10
-pbcZ = 10
-rcut = 1.0  # um
-box_size = np.array([pbcL, pbcY, pbcZ])
-
 # overwrite existing file
 h5filename = 'OrderLinkS.hdf5'
 h5data = h5py.File(h5filename, 'w')
