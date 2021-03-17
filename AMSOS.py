@@ -45,12 +45,41 @@ def getAdjacencyMatrixFromPairs(pairs, N, info=False, save=False, symmetrize=Tru
 
 @nb.njit(parallel=True)
 def normalize(vec):
+    '''vec must be a numpy array'''
     return vec/np.sqrt(vec.dot(vec))
 
 
 @nb.njit(parallel=True)
+def findMove(x0, x1, L):
+    '''x0,x1,L must be scalar FP numbers'''
+    dx = np.abs(x1-x0)
+    if dx > L*0.5:  # jumped across pbc boundary
+        if x1 > x0:
+            return x1-L-x0
+        else:
+            return x1+L-x0
+    else:
+        return x1-x0
+
+
+def orientOrder(orientList, count=False):
+    '''orientList is a list of 3D vecs'''
+    # calc orientation
+    # mean
+    if count:
+        print('Entries in list: ', len(orientList))
+    PList = np.array(orientList)
+    QList = np.array([np.outer(p, p) for p in PList])
+    polarOrder = np.mean(PList, axis=0)
+    nematicOrder = np.mean(QList, axis=0) - np.identity(3)/3
+    # This is the correct S
+    S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
+    return np.array([polarOrder[0], S])
+
+
+@nb.njit(parallel=True)
 def calcNematicS(PList):
-    '''PList must be a numpy array with shape (N,3)'''
+    '''PList must be a numpy array with shape (N,3), each row normalized'''
     # calc orientation
     # mean
     # print('Entries in list: ', len(PList))
@@ -74,9 +103,25 @@ def calcNematicS(PList):
     return S
 
 
+@nb.njit(parallel=True)
+def calcPolarP(PList):
+    '''PList must be a numpy array with shape (N,3), each row normalized'''
+    # calc orientation
+    # mean
+    # print('Entries in list: ', len(PList))
+    N = PList.shape[0]
+    polarOrder = np.array([0, 0, 0])
+    for i in range(N):
+        p = PList[i]
+        polarOrder = polarOrder + p
+
+    polarOrder *= (1.0/float(N))
+    return polarOrder
+
+
 @nb.njit
 def calcCenterOrient(TList):
-    '''TList must be a numpy array with shape (N,6)'''
+    '''TList must be a numpy array with shape (N,8), gid, radius, end0, end1'''
     minus_ends = TList[:, 2:5]
     plus_ends = TList[:, 5:8]
     centers = 0.5*(minus_ends+plus_ends)
