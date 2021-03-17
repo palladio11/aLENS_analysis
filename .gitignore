@@ -8,6 +8,7 @@ result/
 **.pvtp
 **.vtp
 **.yaml
+**.hdf5
 
 
 # Byte-compiled / optimized / DLL files
