@@ -28,7 +28,7 @@ def parse_args():
 
     parser.add_argument("-p", "--path", default=".",
                         help="Path used in AMSOS Analysis functions.")
-    parser.add_argument('-i', "--input", default=None,
+    parser.add_argument('-i', "--image_input", default=None,
                         help="Image parameter yaml file")
 
     parser.add_argument("-A ", "--analysis",
@@ -48,44 +48,6 @@ def parse_args():
     parser.add_argument("-G", "--graph", action="store_true", default=False,
                         help=("Create graph of a seed's end state."))
 
-    # parser.add_argument('-i', "--input", default=None,
-    #                     help="Image parameter yaml file")
-    # if opts.input is None:
-    #     opts.params = {
-    #         'n_graph': 10,
-    #         'fps': 25,
-    #         'time_step': 1.,
-    #         'style': "log_contact"
-    #     }
-    # else:
-    #     param_path = Path(opts.input)
-    #     if not param_path.exists():
-    #         raise IOError(
-    #             " {} does not exist. Put in valid path.".format(param_path))
-
-    #     with param_path.open('r') as pf:
-    #         opts.params = yaml.safe_load(pf)
-
-    # parser.add_argument(
-    #     "-r", "--run_type", type=str,
-    #     choices=['single_seed',
-    #              'multi_seed',
-    #              'param_scan',
-    #              'param_single_scan'],
-    #     default="single_seed",
-    #     help=(
-    #         "AMSOS can analyze multiple simulations and aggregate "
-    #         "data according to various schemes. The 'run_type' argument "
-    #         "specifies how to collect the data from nested data directories.\n"
-    #     ))
-
-    # parser.add_argument(
-    #     "-p", "--param", type=str, default=None,
-    #     help=("Parameter to use in analysis or graphing functions."))
-    # parser.add_argument("--spec", type=str, default='',
-    #                     help=("Specify if parameter used in param scan or "
-    #                           "full run anlaysis is a specific species "
-    #                           "parameter. e.g. 'crosslink' "))
     opts = parser.parse_args()
 
     # Post parsing changes to options
@@ -96,15 +58,15 @@ def parse_args():
 
 
 def main():
-    """!Main function for simcore_analysis
+    """!Main function for AMSOS analysis controller
 
     Parameters
     ----------
-    param_file: Yaml Parameter file
+    Will decipher command line arguments
 
     Returns
     -------
-    TODO
+    Void
 
     """
     opts = parse_args()
