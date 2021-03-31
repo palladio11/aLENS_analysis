@@ -1,16 +1,12 @@
-import glob
-
 import numba as nb
 import numpy as np
-import scipy as sp
-import h5py
 
-import AMSOS as am
+import Util.AMSOS as am
+import Util.HDF5_Wrapper as h5
 
 # overwrite existing file
 h5filename = 'OrderLinkS.hdf5'
-h5data = h5py.File(h5filename, 'w')
-h5data.close()
+h5.newFile(h5filename)
 
 
 def calcOrder(pairs, orients):
@@ -51,12 +47,8 @@ def main():
         frame = am.FrameAscii(file, readProtein=True, sort=True, info=True)
         order = calcLinkOrderS(frame.TList, frame.PList)
         print(order)
-        h5data = h5py.File(h5filename, 'a')
-        grp = h5data.create_group(am.get_basename(frame.filename))
-        dset = grp.create_dataset(
-            "OrderLinkS", order.shape, dtype='float64', chunks=True)
-        dset[...] = order[...]
-        h5data.close()
+        path = am.get_basename(frame.filename)
+        h5.saveData(h5filename, order, path, 'OrderLinkS', float)
 
 
 if __name__ == '__main__':
