@@ -1,5 +1,6 @@
 # ignore test data
 result*-*/
+rdf_**/
 result/
 **.png
 **.npy
@@ -9,7 +10,8 @@ result/
 **.vtp
 **.yaml
 **.hdf5
-rdf_**/
+**.log
+**.out
 
 
 # Byte-compiled / optimized / DLL files

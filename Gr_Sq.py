@@ -2,27 +2,29 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import scipy.special as ss
-import h5py
 
 import os
-import argparse
 
-import AMSOS as am
+import Util.AMSOS as am
+import Util.HDF5_Wrapper as h5
 import point_cloud.PointCloud as pc
 
-boxsize = np.array([10, 10, 10])
 
-data_gr_sq = h5py.File('gr_sq.hdf5', 'w')
-data_gr_sq.close()
-
-parser = argparse.ArgumentParser(
-    description='Calculate sylinder gr/sq from saved Ascii files.')
+parser = am.getDefaultArgParser('Calculate G(r) and S(q)')
 parser.add_argument('--rcut', type=float, dest='rcut', default=1.5,
                     help='rcut for gr')
 
 args = parser.parse_args()
-# meanWindow = args.window
+
+config = am.parseConfig(args.config)
+boxsize = np.array(config['simBoxHigh'])-np.array(config['simBoxLow'])
+
 print('rcut: ', args.rcut)
+print('config: ', args.config)
+print('box_size:', boxsize)
+
+h5FileName = 'gr_sq'
+h5.newFile(h5FileName)
 
 
 def calc_gr_sq(points, foldername, filename):
@@ -64,46 +66,26 @@ def calc_gr_sq(points, foldername, filename):
     plt.close(fig)
     plt.clf()
 
-    return r, rdf, q, Sq
-
-
-def save_data(grp, name, r, rdf, q, Sq):
-    subgrp = grp.create_group(name)
-    data1 = np.vstack([r, rdf]).T
-    data2 = np.vstack([q, Sq]).T
-
-    dset = subgrp.create_dataset(
-        "rdf", data1.shape, dtype='float64', chunks=True)
-    dset[...] = data1[...]
-
-    dset = subgrp.create_dataset(
-        "Sq", data2.shape, dtype='float64', chunks=True)
-    dset[...] = data2[...]
-    return
+    return np.vstack([r, rdf]).T, np.vstack([q, Sq]).T
 
 
 def process_frame(frame):
     minus_pts = frame.TList[:, 2:5]
     plus_pts = frame.TList[:, 5:8]
     center_pts = 0.5*(minus_pts+plus_pts)
+    path = am.get_basename(frame.filename)
 
-    r, rdf, q, Sq = calc_gr_sq(minus_pts, 'rdf_sq_minus', frame.filename)
-    data_gr_sq = h5py.File('gr_sq.hdf5', 'a')
-    grp = data_gr_sq.create_group(am.get_basename(frame.filename))
-    save_data(grp, 'minus', r, rdf, q, Sq)
-    data_gr_sq.close()
+    rdf, Sq = calc_gr_sq(minus_pts, 'rdf_sq_minus', frame.filename)
+    h5.saveData(h5FileName, rdf, path+'/minus', 'rdf', float)
+    h5.saveData(h5FileName, Sq, path+'/minus', 'sq', float)
 
-    r, rdf, q, Sq = calc_gr_sq(plus_pts, 'rdf_sq_plus', frame.filename)
-    data_gr_sq = h5py.File('gr_sq.hdf5', 'a')
-    grp = data_gr_sq.require_group(am.get_basename(frame.filename))
-    save_data(grp, 'plus', r, rdf, q, Sq)
-    data_gr_sq.close()
+    rdf, Sq = calc_gr_sq(plus_pts, 'rdf_sq_plus', frame.filename)
+    h5.saveData(h5FileName, rdf, path+'/plus', 'rdf', float)
+    h5.saveData(h5FileName, Sq, path+'/plus', 'sq', float)
 
-    r, rdf, q, Sq = calc_gr_sq(center_pts, 'rdf_sq_center', frame.filename)
-    data_gr_sq = h5py.File('gr_sq.hdf5', 'a')
-    grp = data_gr_sq.require_group(am.get_basename(frame.filename))
-    save_data(grp, 'center', r, rdf, q, Sq)
-    data_gr_sq.close()
+    rdf, Sq = calc_gr_sq(center_pts, 'rdf_sq_center', frame.filename)
+    h5.saveData(h5FileName, rdf, path+'/center', 'rdf', float)
+    h5.saveData(h5FileName, Sq, path+'/center', 'sq', float)
 
     return
 

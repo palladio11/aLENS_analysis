@@ -1,13 +1,16 @@
 import re
 import os
 import glob
+import argparse as agp
 
 import numpy as np
 import scipy as sp
 import scipy.sparse as ss
+import scipy.optimize as so
 import scipy.io as sio
 
 import vtk
+import yaml
 import numba as nb
 
 
@@ -25,6 +28,27 @@ def getFileListSorted(files, info=True):
     if info:
         print(files)
     return files
+
+
+def getDefaultArgParser(info):
+    '''default argparser'''
+    parser = agp.ArgumentParser(description=info)
+    parser.add_argument('-c', '--config', type=str, default='../RunConfig.yaml',
+                        help='path to config yaml file')
+    parser.add_argument('-p', '--protein', type=str, default='../ProteinConfig.yaml',
+                        help='path to protein yaml file')
+    # examples
+    # parser.add_argument('ngrid', type=int,
+    #                     help='number of samples along X axis')
+    # parser.add_argument('--rcut', type=float,
+    #                     help='cut-off radius of g(r), default 0.1um', default=0.1)
+    return parser
+
+
+def parseConfig(yamlFile):
+    config = yaml.load(open(yamlFile, 'r'), Loader=yaml.FullLoader)
+    print('Config: ', config)
+    return config
 
 
 def getAdjacencyMatrixFromPairs(pairs, N, info=False, save=False, symmetrize=True):
