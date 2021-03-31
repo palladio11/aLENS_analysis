@@ -15,6 +15,7 @@ import yaml
 import time
 
 from .read_func import convert_dat_to_hdf
+from .hic_animation import hic_animation
 
 
 def parse_args():
@@ -50,6 +51,12 @@ def parse_args():
 
     opts = parser.parse_args()
 
+    opts.params = {
+        'n_graph': 1,
+        'fps': 25,
+        'style': "log_contact"
+    }
+
     # Post parsing changes to options
     opts.path = Path(opts.path).resolve()
     opts.data_dir = opts.path / 'result'
@@ -77,6 +84,10 @@ def main():
             h5_data = convert_dat_to_hdf(f'{opts.path.stem}.h5', opts.path)
             print(f" HDF5 created in {time.time() - t0}")
         # run_analysis(opts)
+
+    if opts.movie:
+        hic_animation(opts)
+        return
 
     # if opts.graph:
         # make_graphs(opts)

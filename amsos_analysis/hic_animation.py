@@ -24,7 +24,6 @@ from .read_func import (read_dat_sylinder,
                         get_png_number,
                         count_fils)
 
-rng = np.random.default_rng()  # initialize generator instance
 
 SQRT2 = np.sqrt(2)
 
@@ -56,11 +55,8 @@ def parse_args():
 
 
 def make_separation_mat(com_arr):
-    row_extend_arr = np.tile(np.expand_dims(
-        com_arr, axis=0), (com_arr.shape[0], 1, 1))
-    col_extend_arr = np.transpose(row_extend_arr, (1, 0, 2))
-    dist_mat = np.linalg.norm(row_extend_arr - col_extend_arr, axis=-1)
-
+    dist_mat = np.linalg.norm(
+        com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=-1)
     return dist_mat
 
 
@@ -71,36 +67,36 @@ def gauss_weighted_contact(sep_mat, sigma=.020):
 def create_hic_frame(fil_dat_path, style='sep', **kwargs):
     # Get filament data
     fils = read_dat_sylinder(fil_dat_path)
-    com_arr = []
-    for fil in fils:
-        fil.parse()
-        com_arr += [fil.get_com()]
-
-    com_arr = np.asarray(com_arr)
-    # com_arr = np.asarray([fil.get_com() for fil in fils])
+    com_arr = np.asarray([fil.get_com() for fil in fils])
     sep_mat = make_separation_mat(com_arr)
+
     if style == 'sep':
         return sep_mat
     if style == 'contact':
         return gauss_weighted_contact(sep_mat)
     if style == 'log_contact':
-        print
         return -.5 * np.power(sep_mat, 2) / (.02 * .02 * np.log(10))
     else:
         raise RuntimeError(f' The style "{style}" is not supported currently.')
 
 
-def animate(i, fig, axarr, frames, png_paths, vmax, init_mutable, opts):
+def animate(i, fig, axarr, fil_dat_paths, png_paths, vmax, init_mutable, opts):
     for ax in axarr:
         ax.clear()
 
-    png = plt.imread(png_paths[opts.params['n_graph'] * i])
+    png = plt.imread(str(png_paths[i]))
     img = axarr[0].imshow(png)
 
     print(f'Making frame {i}')
 
+    t0 = time()
+    frame = create_hic_frame(fil_dat_paths[i], **opts.params)
+    t1 = time()
+    print(f"Frame {i} created in: {t1-t0:.2g} sec")
     # c = axarr[1].pcolorfast(frames[i], vmax=vmax, vmin=0)
-    c = axarr[1].pcolorfast(frames[i], vmin=-20)
+    c = axarr[1].pcolorfast(frame, vmin=-20)
+    t2 = time()
+    print(f"Frame {i} drawn in: {t2 - t1:.2g} sec")
     if init_mutable[0] == True:  # Cludge, there is a better way to do thisdf cdf
         fig.colorbar(c, ax=axarr[1], label=r"Log prob contact")
         init_mutable[0] = False
@@ -117,38 +113,62 @@ def animate(i, fig, axarr, frames, png_paths, vmax, init_mutable, opts):
 
 def hic_animation(opts):
 
-    with open('../RunConfig.yaml', 'r') as yf:
+    amsos_stl = {
+        "axes.titlesize": 20,
+        "axes.labelsize": 24,
+        "lines.linewidth": 3,
+        "lines.markersize": 10,
+        "xtick.labelsize": 24,
+        "ytick.labelsize": 24,
+        "font.size": 20,
+        "font.sans-serif": 'Helvetica',
+        "text.usetex": False,
+        'mathtext.fontset': 'cm',
+    }
+    plt.style.use(amsos_stl)
+
+    with open(opts.path / 'RunConfig.yaml', 'r') as yf:
         run_params = yaml.safe_load(yf)
+        opts.params['time_step'] = run_params['timeSnap']
 
-    result_dir = Path(".")
+    result_dir = opts.data_dir
+    # print(result_dir)
     fil_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),
-                           key=get_file_number)
+                           key=get_file_number)[::opts.params['n_graph']]
+    # print(fil_dat_paths)
     png_paths = sorted(result_dir.glob("PNG/*.png"),
-                       key=get_png_number)
+                       key=get_png_number)[::opts.params['n_graph']]
 
-    # rng = np.random.default_rng()
-
+    # print(png_paths)
     init_mutable = [True]
-    frames = []
-    for i, fdp in enumerate(fil_dat_paths[::opts.params['n_graph']]):
-        t0 = time()
-        frames += [create_hic_frame(fdp, **opts.params)]
-        print("Frame {} created in: {:.2g} sec".format(i, time() - t0))
-    fig, axarr = plt.subplots(1, 2, figsize=(18, 8))
+    nframes = len(fil_dat_paths)
+    print(nframes)
+    # for i, fdp in enumerate(fil_dat_paths[::opts.params['n_graph']]):
+    #     t0 = time()
+    #     frames += [create_hic_frame(fdp, **opts.params)]
+    #     print("Frame {} created in: {:.2g} sec".format(i, time() - t0))
+    fig, axarr = plt.subplots(1, 2, figsize=(20, 8))
     # axarr[0].set_aspect('equal')
     axarr[1].set_aspect('equal')
-    vmax = np.amax(frames)
-    ani = FuncAnimation(fig, animate, len(frames),
+    # vmax = np.amax(frames)
+    writer = FFMpegWriter(
+        fps=opts.params['fps'],
+        codec='libx264',
+        bitrate=-1,
+        extra_args=[
+            '-pix_fmt',
+            'yuv420p'])
+    vmax = 0
+    ani = FuncAnimation(fig, animate, nframes,
                         fargs=(
-        fig,
-        axarr,
-        frames,
-        png_paths,
-        vmax,
-        init_mutable, opts),
-        blit=True)
-    writer = FFMpegWriter(fps=opts.params['fps'], bitrate=1800, )
-    ani.save("log_contact_mat_vid.mp4", writer=writer)
+                            fig,
+                            axarr,
+                            fil_dat_paths,
+                            png_paths,
+                            vmax,
+                            init_mutable, opts),
+                        blit=True)
+    ani.save(result_dir / f'{opts.params["style"]}_mat_vid.mp4', writer=writer)
 
 
 ##########################################

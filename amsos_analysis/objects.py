@@ -8,9 +8,6 @@ Description:
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib.animation import FuncAnimation, FFMpegWriter
 import math
 import yaml
 from numba import jit, vectorize
@@ -24,13 +21,14 @@ class filament():
         self.fil_type = str(self.info[0])
         self.gid = int(self.info[1])
 
-    def parse(self):
-        dat = np.asarray(self.info[2:8], dtype=np.double)
+        dat = np.asarray(self.info[2:], dtype=np.double)
         self.radius = dat[0]
         self.minus_end = dat[1:4]
         self.plus_end = dat[4:7]
-
         self.vec = self.plus_end - self.minus_end
+
+    def parse(self):
+        dat = np.asarray(self.info[2:8], dtype=np.double)
         self.lengthxy = np.linalg.norm(self.vec[:-1])
         self.length = np.linalg.norm(self.vec)
         if self.length != 0:
