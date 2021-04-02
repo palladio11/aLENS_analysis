@@ -46,8 +46,10 @@ def getDefaultArgParser(info):
 
 
 def parseConfig(yamlFile):
-    config = yaml.load(open(yamlFile, 'r'), Loader=yaml.FullLoader)
+    file = open(yamlFile, 'r')
+    config = yaml.load(file, Loader=yaml.FullLoader)
     print('Config: ', config)
+    file.close()
     return config
 
 
@@ -73,7 +75,7 @@ def normalize(vec):
     return vec/np.sqrt(vec.dot(vec))
 
 
-@nb.njit(parallel=True)
+@nb.njit
 def findMove(x0, x1, L):
     '''x0,x1,L must be scalar FP numbers'''
     dx = np.abs(x1-x0)
@@ -158,20 +160,25 @@ def calcCenterOrient(TList):
     return centers, orients
 
 
+def parseSylinderAscii(filename,  sort=True, info=False):
+    data = np.loadtxt(filename,
+                      skiprows=2, usecols=(1, 2, 3, 4, 5, 6, 7, 8))
+    if sort:
+        TList = data[data[:, 0].argsort()]  # sort by gid
+    else:
+        TList = data
+    if info:
+        print(TList[:10])
+    return TList
+
+
 class FrameAscii:
     '''Load Ascii.dat data'''
 
     def __init__(self, filename, readProtein=False, sort=True, info=False):
         self.filename = filename
-        # MT
-        data = np.loadtxt(filename,
-                          skiprows=2, usecols=(1, 2, 3, 4, 5, 6, 7, 8))
-        if sort:
-            self.TList = data[data[:, 0].argsort()]  # sort by gid
-        else:
-            self.TList = data
-        if info:
-            print(self.TList[:10])
+        self.TList = parseSylinderAscii(filename, sort, info)
+
         if readProtein:
             filename = filename.replace('Sylinder', 'Protein')
             data = np.loadtxt(filename, skiprows=2,

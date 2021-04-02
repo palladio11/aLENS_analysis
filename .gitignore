@@ -1,7 +1,8 @@
 # ignore test data
+.vscode/
 result*-*/
-rdf_**/
 result/
+rdf_**/
 **.png
 **.npy
 **.mtx
