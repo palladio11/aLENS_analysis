@@ -92,6 +92,6 @@ def process_frame(frame):
 
 files = am.getFileListSorted('result*-*/SylinderAscii_*.dat')
 
-for f in files[-10:]:
+for f in files:
     frame = am.FrameAscii(f, readProtein=False, info=False)
     process_frame(frame)
