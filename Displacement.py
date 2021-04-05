@@ -165,7 +165,6 @@ def plotMovingAverage(avgsteps, axis=0):
 
     pos = np.load('posHistory.npy')
     meanVelHistory = np.load('meanVelHistory_'+str(avgsteps)+'.npy')
-    nsteps = pos.shape[1]
     # plot vx history of 5 rods
     plt.clf()
     for i in range(5):
@@ -180,6 +179,7 @@ def plotMovingAverage(avgsteps, axis=0):
     ortr = pos[:, 0, 4+axis] > 0  # orient right
     ortl = pos[:, 0, 4+axis] < 0  # orient left
 
+    nsteps = meanVelHistory.shape[1]
     for i in range(nsteps):
         plt.clf()
         plt.hist(meanVelHistory[ortr][:, i, axis], bins=bins,
