@@ -1,6 +1,8 @@
 # ignore test data
+.vscode/
 result*-*/
 result/
+rdf_**/
 **.png
 **.npy
 **.mtx
@@ -9,7 +11,8 @@ result/
 **.vtp
 **.yaml
 **.hdf5
-rdf_**/
+**.log
+**.out
 
 
 # Byte-compiled / optimized / DLL files
