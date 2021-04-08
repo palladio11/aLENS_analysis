@@ -54,9 +54,11 @@ def parse_args():
     return opts
 
 
-def make_separation_mat(com_arr):
+def make_separation_mat(com_arr, downsample=1):
+    reduc_com_arr = com_arr[::downsample]
     dist_mat = np.linalg.norm(
-        com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=-1)
+        reduc_com_arr[:, np.newaxis, :] - reduc_com_arr[np.newaxis, :, :],
+        axis=-1)
     return dist_mat
 
 
@@ -64,11 +66,11 @@ def gauss_weighted_contact(sep_mat, sigma=.020):
     return np.exp(-np.power(sep_mat, 2) / (2. * (sigma * sigma)))
 
 
-def create_hic_frame(fil_dat_path, style='sep', **kwargs):
+def create_hic_frame(fil_dat_path, style='sep', downsample=1, **kwargs):
     # Get filament data
     fils = read_dat_sylinder(fil_dat_path)
     com_arr = np.asarray([fil.get_com() for fil in fils])
-    sep_mat = make_separation_mat(com_arr)
+    sep_mat = make_separation_mat(com_arr, downsample)
 
     if style == 'sep':
         return sep_mat
@@ -80,7 +82,7 @@ def create_hic_frame(fil_dat_path, style='sep', **kwargs):
         raise RuntimeError(f' The style "{style}" is not supported currently.')
 
 
-def animate(i, fig, axarr, fil_dat_paths, png_paths, vmax, init_mutable, opts):
+def animate(i, fig, axarr, fil_dat_paths, png_paths, init_mutable, opts):
     for ax in axarr:
         ax.clear()
 
@@ -94,7 +96,8 @@ def animate(i, fig, axarr, fil_dat_paths, png_paths, vmax, init_mutable, opts):
     t1 = time()
     print(f"Frame {i} created in: {t1-t0:.2g} sec")
     # c = axarr[1].pcolorfast(frames[i], vmax=vmax, vmin=0)
-    c = axarr[1].pcolorfast(frame, vmin=-20)
+
+    c = axarr[1].pcolorfast(frame, vmin=opts.params['vmin'])
     t2 = time()
     print(f"Frame {i} drawn in: {t2 - t1:.2g} sec")
     if init_mutable[0] == True:  # Cludge, there is a better way to do thisdf cdf
@@ -165,7 +168,6 @@ def hic_animation(opts):
                             axarr,
                             fil_dat_paths,
                             png_paths,
-                            vmax,
                             init_mutable, opts),
                         blit=True)
     ani.save(result_dir / f'{opts.params["style"]}_mat_vid.mp4', writer=writer)

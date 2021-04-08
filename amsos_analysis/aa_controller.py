@@ -32,6 +32,9 @@ def parse_args():
     parser.add_argument('-i', "--image_input", default=None,
                         help="Image parameter yaml file")
 
+    parser.add_argument("-t", "--type", default=None,
+                        help="Type of analysis")
+
     parser.add_argument("-A ", "--analysis",
                         choices=[
                             None,
@@ -54,7 +57,9 @@ def parse_args():
     opts.params = {
         'n_graph': 1,
         'fps': 25,
-        'style': "log_contact"
+        'style': "log_contact",
+        'downsample': 16,
+        'vmin': -100
     }
 
     # Post parsing changes to options
