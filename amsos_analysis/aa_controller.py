@@ -58,8 +58,8 @@ def parse_args():
         'n_graph': 1,
         'fps': 25,
         'style': "log_contact",
-        'downsample': 16,
-        'vmin': -100
+        'downsample': 4,
+        'vmin': -50
     }
 
     # Post parsing changes to options

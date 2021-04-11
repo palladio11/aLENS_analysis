@@ -135,10 +135,8 @@ def hic_animation(opts):
         opts.params['time_step'] = run_params['timeSnap']
 
     result_dir = opts.data_dir
-    # print(result_dir)
     fil_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),
                            key=get_file_number)[::opts.params['n_graph']]
-    # print(fil_dat_paths)
     png_paths = sorted(result_dir.glob("PNG/*.png"),
                        key=get_png_number)[::opts.params['n_graph']]
 
@@ -146,14 +144,8 @@ def hic_animation(opts):
     init_mutable = [True]
     nframes = len(fil_dat_paths)
     print(nframes)
-    # for i, fdp in enumerate(fil_dat_paths[::opts.params['n_graph']]):
-    #     t0 = time()
-    #     frames += [create_hic_frame(fdp, **opts.params)]
-    #     print("Frame {} created in: {:.2g} sec".format(i, time() - t0))
     fig, axarr = plt.subplots(1, 2, figsize=(20, 8))
-    # axarr[0].set_aspect('equal')
     axarr[1].set_aspect('equal')
-    # vmax = np.amax(frames)
     writer = FFMpegWriter(
         fps=opts.params['fps'],
         codec='libx264',
