@@ -18,13 +18,13 @@ import point_cloud.PointCloud as pc
 parser = am.getDefaultArgParser('Parse log file')
 parser.add_argument('--logfile', type=str, dest='logfile',
                     help='logfile to be parsed')
+parser.add_argument('--maxline', type=int, dest='maxline', default=0,
+                    help='max number of lines to parse, default unlimited')
 
 args = parser.parse_args()
 
 print('logfile: ', args.logfile)
-
-# h5FileName = 'log'
-# h5.newFile(h5FileName)
+print('maxline: ', args.maxline)
 
 
 def parseOneStep(lines):
@@ -66,11 +66,11 @@ for line in file:
     if append:
         msg_onestep.append(line)
         count += 1
-    if(count > 2000):
+    if count > args.maxline and args.maxline > 0:
         break
     pass
 
-np.savetxt('logdata.txt', np.array(
-    data), header='timestamp, wtime_bcqp, wtime_mainloop, bcqp_steps, bcqp_residue')
+np.savetxt('logdata.txt', np.array(data), fmt='%.14g',
+           header='timestamp, wtime_bcqp, wtime_mainloop, bcqp_steps, bcqp_residue')
 
 file.close()
