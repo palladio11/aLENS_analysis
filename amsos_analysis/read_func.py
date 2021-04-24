@@ -137,24 +137,20 @@ def read_sylinder_data(tubule_fnames, posit_grp):
         ntubules = int(fn.readline())
     # Create dataset for MT info
     sy_dset = posit_grp.create_dataset('sylinders',
-                                       shape=(ntubules, 11, nframes))
+                                       shape=(ntubules, 9, nframes))
     sy_dset.attrs['ntubules'] = ntubules
     sy_dset.attrs['axis dimensions'] = ['sylinders', 'state', 'frame']
     # Set tubule attribute: names of columns
     sy_dset.attrs['column labels'] = ['gid', 'radius',
                                       'minus pos x', 'minus pos y', 'minus pos z',
                                       'plus pos x', 'plus pos y', 'plus pos z',
-                                      'group', 'prev', 'next']
+                                      'group', ]
     for frame, tfname in enumerate(tubule_fnames):
         fpath = Path(tfname).resolve()
         filaments = read_dat_sylinder(fpath)
-        data_arr = [f.get_dat() for f in filaments]
 
-        # with fpath.open(mode='r') as tf:
-        #     lines = tf.readlines()
-        #     data_arr = []
-        #     for line in lines[2:]:
-        #         data_arr += [line.split()[1:]]
+        data_arr = [fil.get_dat()
+                    for fil in filaments if (fil.fil_type is not 'L')]
 
         sy_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
     return sy_dset

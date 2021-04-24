@@ -55,11 +55,14 @@ def parse_args():
 
 
 def make_separation_mat(com_arr, downsample=1):
+    nbeads = com_arr.shape[0]
     reduc_com_arr = com_arr[::downsample]
+    x = np.arange(nbeads + 1)[::int((nbeads) / reduc_com_arr.shape[0])]
+    X, Y = np.meshgrid(x, x)
     dist_mat = np.linalg.norm(
         reduc_com_arr[:, np.newaxis, :] - reduc_com_arr[np.newaxis, :, :],
         axis=-1)
-    return dist_mat
+    return dist_mat, X, Y
 
 
 def gauss_weighted_contact(sep_mat, sigma=.020):
@@ -70,14 +73,14 @@ def create_hic_frame(fil_dat_path, style='sep', downsample=1, **kwargs):
     # Get filament data
     fils = read_dat_sylinder(fil_dat_path)
     com_arr = np.asarray([fil.get_com() for fil in fils])
-    sep_mat = make_separation_mat(com_arr, downsample)
+    sep_mat, X, Y = make_separation_mat(com_arr, downsample)
 
     if style == 'sep':
-        return sep_mat
+        return sep_mat, X, Y
     if style == 'contact':
-        return gauss_weighted_contact(sep_mat)
+        return gauss_weighted_contact(sep_mat), X, Y
     if style == 'log_contact':
-        return -.5 * np.power(sep_mat, 2) / (.02 * .02 * np.log(10))
+        return -.5 * np.power(sep_mat, 2) / (.02 * .02 * np.log(10)), X, Y
     else:
         raise RuntimeError(f' The style "{style}" is not supported currently.')
 
@@ -88,24 +91,30 @@ def animate(i, fig, axarr, fil_dat_paths, png_paths, init_mutable, opts):
 
     png = plt.imread(str(png_paths[i]))
     img = axarr[0].imshow(png)
+    axarr[0].set_axis_off()
 
     print(f'Making frame {i}')
 
     t0 = time()
-    frame = create_hic_frame(fil_dat_paths[i], **opts.params)
+    frame, X, Y = create_hic_frame(fil_dat_paths[i], **opts.params)
     t1 = time()
     print(f"Frame {i} created in: {t1-t0:.2g} sec")
     # c = axarr[1].pcolorfast(frames[i], vmax=vmax, vmin=0)
 
-    c = axarr[1].pcolorfast(frame, vmin=opts.params['vmin'])
+    c = axarr[1].pcolorfast(X, Y, frame, vmin=opts.params['vmin'])
     t2 = time()
     print(f"Frame {i} drawn in: {t2 - t1:.2g} sec")
     if init_mutable[0] == True:  # Cludge, there is a better way to do thisdf cdf
-        fig.colorbar(c, ax=axarr[1], label=r"Log prob contact")
+        fig.colorbar(
+            c,
+            ax=axarr[1],
+            # label=r"$\log$(Inferred contact map) $\sim$
+            # ($r_{ij}^2/2\sigma^2$)")
+            label=r"$\log$(Inferred contact map) $\sim$ ($r_{ij}^2$)")
         init_mutable[0] = False
 
-    axarr[1].set_xlabel("Loci bin")
-    axarr[1].set_ylabel("Loci bin")
+    axarr[1].set_xlabel(r"Bead $i$")
+    axarr[1].set_ylabel(r"Bead $j$")
 
     # pcm = ax.pcolorfast(frames[i], cmap='gray', vmax=vmax)
     axarr[0].set_title("Time {:.2f} sec".format(float(i *
