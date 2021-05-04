@@ -2,14 +2,16 @@ import os
 import numba as nb
 import numpy as np
 import scipy.optimize as so
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
 import Util.AMSOS as am
 
 
-parser = am.getDefaultArgParser('Calculate net displacement along X direction')
+parser = am.getDefaultArgParser(
+    'Calculate net displacement along certain direction')
+parser.add_argument('--calcmean', type=bool, dest='calcmean', default=False,
+                    help='if calculate moving average')
 parser.add_argument('--velmax', type=float, dest='velmax', default=1.0,
                     help='vel max (um/s) for histogram')
 parser.add_argument('--avg', type=int, nargs='+', dest='avg', default=[10, 20, 50, 100],
@@ -222,6 +224,9 @@ def main():
         disp = np.load('dispHistory.npy')
 
     plotVelDiff(pos, disp, args.axis)
+
+    if not args.calcmean:
+        exit()
 
     for steps in avgWindow:
         avgfname = 'meanVelHistory_'+str(steps)

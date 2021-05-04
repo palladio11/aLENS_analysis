@@ -1,19 +1,7 @@
-import os
-import scipy.special as ss
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 import numpy as np
 import re
-import os
-import sys
-
-currentdir = os.path.dirname(os.path.realpath(__file__))  # nopep8
-parentdir = os.path.dirname(currentdir)  # nopep8
-sys.path.append(parentdir)  # nopep8
 
 import Util.AMSOS as am
-import Util.HDF5_Wrapper as h5
-import point_cloud.PointCloud as pc
 
 parser = am.getDefaultArgParser('Parse log file')
 parser.add_argument('--logfile', type=str, dest='logfile',
