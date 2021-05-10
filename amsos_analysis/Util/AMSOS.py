@@ -191,8 +191,15 @@ class FrameAscii:
                 print(self.PList[:10])
 
 
+class Sylinder:
+    def __init__(self):
+        self.end0 = np.array([0, 0, 0])
+        self.end1 = np.array([0, 0, 0])
+
+
 class FrameVTK:
     '''Load VTK pvtp data. datafields are dynamically loaded.'''
+# TODO: fix bugs in this parser
 
     def __init__(self, sylinderFile):
         self.sylinders = []
