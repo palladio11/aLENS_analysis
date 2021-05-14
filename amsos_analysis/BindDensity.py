@@ -11,6 +11,9 @@ import Util.HDF5_Wrapper as h5
 parser = am.getDefaultArgParser('Calculate G(r) and S(q)')
 parser.add_argument('--pconfig', type=str, dest='pconfig',
                     default='../ProteinConfig.yaml', help='ProteinConfig.yaml file location')
+parser.add_argument('--plot_each', type=bool, dest='plot_each',
+                    default=False, help='plot hist for each frame')
+
 
 args = parser.parse_args()
 
@@ -39,7 +42,6 @@ def process_frame(frame):
 
     minus_pts = frame.TList[:, 2:5]
     plus_pts = frame.TList[:, 5:8]
-    center_pts = 0.5*(minus_pts+plus_pts)
 
     xlinkers = frame.PList
     loc = []
@@ -59,6 +61,9 @@ def process_frame(frame):
     # print(loc)
 
     name = am.get_basename(frame.filename)
+
+    if not args.plot_each:
+        return
 
     fig = plt.figure(figsize=(5, 3))
     ax = fig.add_subplot(111)
@@ -91,6 +96,4 @@ files = am.getFileListSorted('result*-*/SylinderAscii_*.dat')
 
 for f in files:
     frame = FrameAscii(f)
-    # print(frame.TList)
-    # print(frame.PList[-5:])
     process_frame(frame)

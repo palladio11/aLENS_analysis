@@ -4,9 +4,7 @@ import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 
-
 import Util.AMSOS as am
-
 
 parser = am.getDefaultArgParser(
     'Calculate net displacement along certain direction')
@@ -18,6 +16,9 @@ parser.add_argument('--avg', type=int, nargs='+', dest='avg', default=[10, 20, 5
                     help='moving average for every ... snapshots')
 parser.add_argument('--axis', type=int, dest='axis', default=0,
                     help='0,1,2 -> x,y,z axis')
+parser.add_argument('--overwrite', type=bool, dest='overwrite', default=True,
+                    help='overwrite existing npy files')
+
 args = parser.parse_args()
 
 config = am.parseConfig(args.config)
@@ -211,13 +212,13 @@ def plotMovingAverage(avgsteps, axis=0):
 
 
 def main():
-    if not os.path.isfile('posHistory.npy'):
+    if args.overwrite or (not os.path.isfile('posHistory.npy')):
         pos = genPosHistory()
         np.save('posHistory', pos)
     else:
         pos = np.load('posHistory.npy')
 
-    if not os.path.isfile('dispHistory.npy'):
+    if args.overwrite or (not os.path.isfile('dispHistory.npy')):
         disp = genDispHistory(pos)
         np.save('dispHistory', disp)
     else:
