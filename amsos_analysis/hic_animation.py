@@ -28,30 +28,30 @@ from .read_func import (read_dat_sylinder,
 SQRT2 = np.sqrt(2)
 
 
-def parse_args():
+# def parse_args():
 
-    parser = argparse.ArgumentParser(prog='hic_animation.py')
-    parser.add_argument('-i', "--input", default=None,
-                        help="Image parameter yaml file")
-    opts = parser.parse_args()
+#     parser = argparse.ArgumentParser(prog='hic_animation.py')
+#     parser.add_argument('-i', "--input", default=None,
+#                         help="Image parameter yaml file")
+#     opts = parser.parse_args()
 
-    if opts.input is None:
-        opts.params = {
-            'n_graph': 10,
-            'fps': 25,
-            'time_step': 1.,
-            'style': "log_contact"
-        }
-    else:
-        param_path = Path(opts.input)
-        if not param_path.exists():
-            raise IOError(
-                " {} does not exist. Put in valid path.".format(param_path))
+#     if opts.input is None:
+#         opts.params = {
+#             'n_graph': 30,
+#             'fps': 25,
+#             'time_step': 10.,
+#             'style': "log_contact"
+#         }
+#     else:
+#         param_path = Path(opts.input)
+#         if not param_path.exists():
+#             raise IOError(
+#                 " {} does not exist. Put in valid path.".format(param_path))
 
-        with param_path.open('r') as pf:
-            opts.params = yaml.safe_load(pf)
+#         with param_path.open('r') as pf:
+#             opts.params = yaml.safe_load(pf)
 
-    return opts
+#     return opts
 
 
 def make_separation_mat(com_arr, downsample=1):
@@ -72,7 +72,8 @@ def gauss_weighted_contact(sep_mat, sigma=.020):
 def create_hic_frame(fil_dat_path, style='sep', downsample=1, **kwargs):
     # Get filament data
     fils = read_dat_sylinder(fil_dat_path)
-    com_arr = np.asarray([fil.get_com() for fil in fils])
+    com_arr = np.asarray([fil.get_com()
+                          for fil in fils if (fil.fil_type is not 'L')])
     sep_mat, X, Y = make_separation_mat(com_arr, downsample)
 
     if style == 'sep':
@@ -110,7 +111,7 @@ def animate(i, fig, axarr, fil_dat_paths, png_paths, init_mutable, opts):
             ax=axarr[1],
             # label=r"$\log$(Inferred contact map) $\sim$
             # ($r_{ij}^2/2\sigma^2$)")
-            label=r"$\log$(Inferred contact map) $\sim$ ($r_{ij}^2$)")
+            label=r"$\log$(Inferred contact map) $\sim$ ($-r_{ij}^2$)")
         init_mutable[0] = False
 
     axarr[1].set_xlabel(r"Bead $i$")
