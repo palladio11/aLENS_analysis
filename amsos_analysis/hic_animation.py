@@ -118,9 +118,8 @@ def animate(i, fig, axarr, fil_dat_paths, png_paths, init_mutable, opts):
     axarr[1].set_ylabel(r"Bead $j$")
 
     # pcm = ax.pcolorfast(frames[i], cmap='gray', vmax=vmax)
-    axarr[0].set_title("Time {:.2f} sec".format(float(i *
-                                                      opts.params['time_step'] *
-                                                      opts.params['n_graph'])))
+    axarr[0].set_title("Time {:.2f} sec".format(
+        float(i * opts.params['time_step'] * opts.params['n_graph'])))
     return [img, c]
 
 
