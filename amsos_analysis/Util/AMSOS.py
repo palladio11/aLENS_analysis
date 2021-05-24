@@ -4,12 +4,12 @@ import glob
 import argparse as agp
 
 import numpy as np
-import scipy as sp
 import scipy.sparse as ss
-import scipy.optimize as so
 import scipy.io as sio
 
 import vtk
+from vtk.util.numpy_support import vtk_to_numpy
+
 import yaml
 import numba as nb
 
@@ -33,15 +33,18 @@ def getFileListSorted(files, info=True):
 def getDefaultArgParser(info):
     '''default argparser'''
     parser = agp.ArgumentParser(description=info)
-    parser.add_argument('-c', '--config', type=str, default='../RunConfig.yaml',
+    parser.add_argument('-c', '--config', type=str,
+                        default='../RunConfig.yaml',
                         help='path to config yaml file')
-    parser.add_argument('-p', '--protein', type=str, default='../ProteinConfig.yaml',
+    parser.add_argument('-p', '--protein', type=str,
+                        default='../ProteinConfig.yaml',
                         help='path to protein yaml file')
     # examples
     # parser.add_argument('ngrid', type=int,
     #                     help='number of samples along X axis')
     # parser.add_argument('--rcut', type=float,
-    #                     help='cut-off radius of g(r), default 0.1um', default=0.1)
+    #                     help='cut-off radius of g(r), default 0.1um',
+    #  default=0.1)
     return parser
 
 
@@ -53,14 +56,16 @@ def parseConfig(yamlFile):
     return config
 
 
-def getAdjacencyMatrixFromPairs(pairs, N, info=False, save=False, symmetrize=True):
+def getAdjacencyMatrixFromPairs(pairs, N, info=False,
+                                save=False, symmetrize=True):
     '''pairs is a list of [i,j] pairs. 0<=i,j<N'''
     if info:
         print(len(pairs))
     pairs = pairs[np.logical_and(pairs[:, 0] >= 0, pairs[:, 1] >= 0)]
     Npair = pairs.shape[0]  # number of pairs
     nbMat = ss.coo_matrix(
-        (np.ones(Npair), (pairs[:, 0], pairs[:, 1])), shape=(N, N), dtype=np.int)
+        (np.ones(Npair), (pairs[:, 0], pairs[:, 1])),
+        shape=(N, N), dtype=np.int)
     if symmetrize:
         nbMat = (nbMat+nbMat.transpose())
     if save:
@@ -191,21 +196,14 @@ class FrameAscii:
                 print(self.PList[:10])
 
 
-class Sylinder:
-    def __init__(self):
-        self.end0 = np.array([0, 0, 0])
-        self.end1 = np.array([0, 0, 0])
-
-
 class FrameVTK:
     '''Load VTK pvtp data. datafields are dynamically loaded.'''
-# TODO: fix bugs in this parser
 
-    def __init__(self, sylinderFile):
-        self.sylinders = []
-        self.parseSylinderFile(sylinderFile)
+    def __init__(self, dataFile):
+        self.data = {}  # dict, dataname -> np.array
+        self.parseFile(dataFile)
 
-    def parseFile(self, dataFile, objType, objList):
+    def parseFile(self, dataFile):
         print("Parsing data from " + dataFile)
         # create vtk reader
         reader = vtk.vtkXMLPPolyDataReader()
@@ -215,13 +213,9 @@ class FrameVTK:
 
         # fill data
         # step 1, end coordinates
-        nObj = int(data.GetPoints().GetNumberOfPoints() / 2)
-        print("parsing data for ", nObj, " sylinders")
-        for i in range(nObj):
-            s = objType()
-            s.end0 = data.GetPoints().GetPoint(2 * i)
-            s.end1 = data.GetPoints().GetPoint(2 * i + 1)
-            objList.append(s)
+        points = data.GetPoints()
+        self.data["points"] = vtk_to_numpy(
+            points.GetData())
 
         # step 2, member cell data
         numCellData = data.GetCellData().GetNumberOfArrays()
@@ -230,8 +224,7 @@ class FrameVTK:
             cdata = data.GetCellData().GetArray(i)
             dataName = cdata.GetName()
             print("Parsing Cell Data", dataName)
-            for j in range(len(objList)):
-                setattr(objList[j], dataName, cdata.GetTuple(j))
+            self.data[dataName] = vtk_to_numpy(cdata)
 
         # step 3, member point data
         numPointData = data.GetPointData().GetNumberOfArrays()
@@ -240,21 +233,9 @@ class FrameVTK:
             pdata = data.GetPointData().GetArray(i)
             dataName = pdata.GetName()
             print("Parsing Point Data", dataName)
-            for j in range(len(objList)):
-                setattr(objList[j], dataName + "0", pdata.GetTuple(2 * j))
-                setattr(objList[j], dataName + "1", pdata.GetTuple(2 * j + 1))
-
-        print("-------------------------------------")
-        self.sylinders.sort(key=lambda x: x.gid, reverse=False)
-
-    def parseSylinderFile(self, sylinderFile):
-        self.parseFile(sylinderFile, Sylinder, self.sylinders)
+            self.data[dataName] = vtk_to_numpy(pdata)
 
     def printData(self):
         # output all data for debug
-        for s in self.sylinders[:10]:
-            # print(s.end0, s.end1)
-            attrs = vars(s)
-            print('*************************************')
-            print('\n'.join("%s: %s" % item for item in attrs.items()))
-            print('*************************************')
+        for attr in self.data.keys():
+            print(attr, self.data[attr])
