@@ -55,11 +55,13 @@ def parse_args():
     opts = parser.parse_args()
 
     opts.params = {
-        'n_graph': 5,
+        'n_graph': 1,
         'fps': 25,
         'style': "log_contact",
         'downsample': 1,
-        'vmin': -20
+        'vmin': -20,
+        'bead_range': [0, 520],
+        # 'bead_range': None,
     }
 
     # Post parsing changes to options

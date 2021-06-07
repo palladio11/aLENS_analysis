@@ -69,11 +69,18 @@ def gauss_weighted_contact(sep_mat, sigma=.020):
     return np.exp(-np.power(sep_mat, 2) / (2. * (sigma * sigma)))
 
 
-def create_hic_frame(fil_dat_path, style='sep', downsample=1, **kwargs):
+def create_hic_frame(fil_dat_path, style='sep',
+                     downsample=1, bead_range=None, **kwargs):
     # Get filament data
     fils = read_dat_sylinder(fil_dat_path)
     com_arr = np.asarray([fil.get_com()
                           for fil in fils if (fil.fil_type is not 'L')])
+    if not bead_range is None:
+        if len(bead_range) == 1:
+            com_arr = com_arr[bead_range[0]:]
+        else:
+            com_arr = com_arr[bead_range[0]:bead_range[1]]
+
     sep_mat, X, Y = make_separation_mat(com_arr, downsample)
 
     if style == 'sep':
@@ -176,5 +183,6 @@ def hic_animation(opts):
 
 ##########################################
 if __name__ == "__main__":
-    opts = parse_args()
-    hic_animation(opts)
+    pass
+    # opts = parse_args()
+    # hic_animation(opts)
