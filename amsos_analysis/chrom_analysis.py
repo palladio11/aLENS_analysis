@@ -30,7 +30,8 @@ def log_gauss_weighted_contact(sep_mat, sigma=.020):
 
 
 def get_link_energy_arrays(h5_data, write=False):
-    """TODO: Docstring for get_mean_energy_array.
+    """ Get the mean, standard deviation, and expected energy of all links in
+    a bead-spring chain
 
     @param h5_data HDF5 data file to analyze with all raw data about filaments
     @param write If true, will write data directly to the analysis group in
@@ -193,6 +194,56 @@ def total_distr_hists(pos_mat, rel_ind=0, nbins=100, hist_max=1):
             (z_rho_hist, rho_bin_edges, z_bin_edges))
 
 
+def cart_distr_hists(pos_mat, rel_pos, e0_ind, e1_ind, nbins=100, hist_max=1.):
+    """TODO: Docstring for radial_distr.
+    @param pos_mat TODO
+    @param rel_ind TODO
+    @param nbins TODO
+    @return: TODO
+    """
+    rel_vec_arr = pos_mat - (rel_pos)[np.newaxis, :, :]
+    e0_e1_hist, e0_edges, e1_edges = np.histogram2d(
+        rel_vec_arr[:, e0_ind, :].flatten(),
+        rel_vec_arr[:, e1_ind, :].flatten(),
+        int(nbins / 2),
+        range=[[-hist_max, hist_max], [-hist_max, hist_max]], density=True)
+
+    return (e0_e1_hist, e0_edges, e1_edges)
+
+
+def cylin_distr_hists(pos_mat, zero_pos, z_uvec, nbins=100, hist_max=1.):
+    """TODO: Docstring for cylindrical histogram.
+    @param pos_mat TODO
+    @param rel_ind TODO
+    @param nbins TODO
+    @return: TODO
+    """
+    rel_vec_arr = pos_mat - (zero_pos)[np.newaxis, :, :]
+    z_proj_arr = np.einsum('ijk,jk->ik', rel_vec_arr, z_uvec)
+    rho_proj_arr = np.linalg.norm(
+        rel_vec_arr - np.einsum('jk,ik->ijk', z_uvec, z_proj_arr), axis=1)
+    rho_z_hist, rho_bin_edges, z_bin_edges = np.histogram2d(
+        rho_proj_arr.flatten(), z_proj_arr.flatten(), int(nbins / 2),
+        range=[[0, hist_max], [-hist_max, hist_max]], density=True)
+
+    return (rho_z_hist, rho_bin_edges, z_bin_edges)
+
+
+def rad_distr_hists(pos_mat, zero_pos, nbins=100, hist_max=1.):
+    """TODO: Docstring for cylindrical histogram.
+    @param pos_mat TODO
+    @param nbins TODO
+    @return: TODO
+    """
+    rel_vec_arr = pos_mat - (zero_pos)[np.newaxis, :, :]
+    rad_arr = np.linalg.norm(rel_vec_arr, axis=1).flatten()
+
+    rad_hist, rad_bin_edges = np.histogram(
+        rad_arr, nbins, range=[
+            0, hist_max], density=True)
+    return (rad_hist, rad_bin_edges)
+
+
 def get_all_rog_stats(pos_mat, rel_ind=0):
     rel_vec_arr = pos_mat - (pos_mat[rel_ind])[np.newaxis, :, :]
     pos_avg_arr = rel_vec_arr.mean(axis=2)
@@ -204,15 +255,39 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
 
 
 def get_time_avg_contact_mat(com_arr, sigma=.02, avg_block_step=1):
-    #np.convolve(com_arr[:,0,:].flatten(), np.ones(avg_block_steps), 'valid') / avg_block_step
-    #np.convolve(com_arr[:,0,:].flatten(), np.ones(avg_block_steps), 'valid') / avg_block_step
-    #np.convolve(com_arr[:,0,:].flatten(), np.ones(avg_block_steps), 'valid') / avg_block_step
-    # mov_avg_com_arr =
     reduc_com_arr = com_arr[::avg_block_step, :, :]  # simple downsampling
     sep_mat = np.linalg.norm(
         reduc_com_arr[:, np.newaxis, :, :] - reduc_com_arr[np.newaxis, :, :, :], axis=2)
     log_contact_map = log_gauss_weighted_contact(sep_mat, sigma)
     return log_contact_map.mean(axis=-1)
+
+
+def get_end_end_distance(com_arr):
+    return np.linalg.norm(com_arr[0, :, :] - com_arr[-1, :, :], axis=0)
+
+
+def calc_rad_of_gyration(pos_mat):
+    """Calculate the radius of gyration of filament
+
+    @param pos_mat TODO
+    @return: TODO
+
+    """
+    n_beads = float(pos_mat.shape[0])
+    rel_pos_arr = pos_mat - np.mean(pos_mat, axis=0)
+
+    rog_sqr_arr = np.einsum('ijk,ijk->k', rel_pos_arr, rel_pos_arr) / n_beads
+    return np.sqrt(rog_sqr_arr)
+
+
+def find_neighbors(com_arr, diam, time_ind=0):
+    """Find beads that are in close proximity with one another at any given time.
+
+    """
+    neighbor_mat = (np.linalg.norm((com_arr[:, np.newaxis, :, time_ind] -
+                                    com_arr[np.newaxis, :, :, time_ind]),
+                                   axis=2) < diam * 1.2).astype(int)
+    return neighbor_mat
 
 
 ##########################################
