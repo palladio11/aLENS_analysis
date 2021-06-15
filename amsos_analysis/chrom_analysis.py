@@ -84,7 +84,7 @@ def get_sep_hist(h5_data, nbins=100, ss_ind=0, write=False):
     return dist_hist, bin_edges
 
 
-def get_sep_dist_mat(h5_data, ss_ind=0, write=False):
+def get_sep_dist_mat(h5_data, ss_ind=0, bead_range=None, write=False):
     """Returns a NxNxM matrix of NXN filaments distances over M time points
     starting at ss_ind time point.
 
@@ -95,6 +95,8 @@ def get_sep_dist_mat(h5_data, ss_ind=0, write=False):
     sy_dat = h5_data['raw_data']['sylinders'][...]
 
     com_arr = .5 * (sy_dat[:, 2:5, :] + sy_dat[:, 5:8, :])
+    if bead_range is not None:
+        com_arr = com_arr[bead_range[0]:bead_range[1]]
 
     dist_mat = np.linalg.norm((com_arr[:, np.newaxis, :, ss_ind:] -
                                com_arr[np.newaxis, :, :, ss_ind:]),
@@ -242,6 +244,23 @@ def rad_distr_hists(pos_mat, zero_pos, nbins=100, hist_max=1.):
         rad_arr, nbins, range=[
             0, hist_max], density=True)
     return (rad_hist, rad_bin_edges)
+
+
+def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1):
+    """TODO: Docstring for cylindrical histogram.
+    @param pos_mat TODO
+    @param nbins TODO
+    @return: TODO
+    """
+
+    rad_distr_func, rad_bin_edges = np.histogram(
+        dist_mat.flatten(), nbins, range=[
+            0, hist_max], density=False)
+    dr = rad_bin_edges[1:] - rad_bin_edges[:-1]
+    rad = .5 * (rad_bin_edges[1:] + rad_bin_edges[:-1])
+
+    rad_distr_func /= 2. * np.pi * np.power(rad, 2) * dr * orig_density
+    return (rad_distr_func, rad_bin_edges)
 
 
 def get_all_rog_stats(pos_mat, rel_ind=0):
