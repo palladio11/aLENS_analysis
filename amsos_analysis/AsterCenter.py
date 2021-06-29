@@ -78,6 +78,7 @@ def calc_gr_sq(pts, path, label):
     rho = pc.rho(npar, boxsize)
     pairs = pc.get_pair(pts, boxsize, rcut)
     rvec = pc.get_rvec(pts, boxsize, rcut, pairs)
+    rnorm = np.linalg.norm(rvec, axis=1)
     r, rdf = pc.gen_rdf(rvec, npar, rho, rcut=rcut, nbins=int(rcut/0.05+1))
     q = np.array([(2*np.pi/boxsize[0])*(j+1) for j in range(500)])
     Sq = np.zeros(q.shape)
@@ -88,7 +89,7 @@ def calc_gr_sq(pts, path, label):
     SQ = np.vstack([q, Sq]).T
 
     h5.saveData(h5FileName, pts, path+'/'+label, 'pts', float)
-    h5.saveData(h5FileName, rvec, path+'/'+label, 'rvec', float)
+    h5.saveData(h5FileName, rnorm, path+'/'+label, 'rnorm', float)
     h5.saveData(h5FileName, RDF, path+'/'+label, 'rdf', float)
     h5.saveData(h5FileName, SQ, path+'/'+label, 'sq', float)
 
