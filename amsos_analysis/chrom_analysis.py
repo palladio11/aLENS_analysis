@@ -267,10 +267,12 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
     rel_vec_arr = pos_mat - (pos_mat[rel_ind])[np.newaxis, :, :]
     pos_avg_arr = rel_vec_arr.mean(axis=2)
     pos_std_arr = rel_vec_arr.std(axis=2)
-    rad_pos_arr = np.linalg.norm(pos_avg_arr, axis=1)
-    rog_arr = np.linalg.norm(pos_std_arr, axis=1)
+    #pos_mean_sqr_arr = np.mean(np.einsum('ijk,ijk->ik',rel_vec_arr, rel_vec_arr), axis=1)
+    rad_pos_arr = np.linalg.norm(rel_vec_arr, axis=1)
+    rad_mean_arr = np.power(rad_pos_arr, 2).mean(axis=1)
+    rad_std_arr = rad_pos_arr.std(axis=1)
 
-    return(pos_avg_arr, pos_std_arr, rad_pos_arr, rog_arr)
+    return(pos_avg_arr, pos_std_arr, rad_mean_arr, rad_std_arr)
 
 
 def get_time_avg_contact_mat(com_arr, sigma=.02, avg_block_step=1):

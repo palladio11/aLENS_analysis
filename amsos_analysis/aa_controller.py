@@ -16,6 +16,7 @@ import time
 
 from .read_func import convert_dat_to_hdf
 from .hic_animation import hic_animation
+from .min_animation import min_animation
 
 
 def parse_args():
@@ -47,8 +48,10 @@ def parse_args():
                         help=" Specify analysis type to determine if data will"
                         " be overwritten. Options include "
                         "(overwrite, analyze(default), or load.")
-    parser.add_argument("-M", "--movie", action="store_true", default=False,
-                        help=("Create an animation from a seed."))
+    parser.add_argument("-M", "--movie", choices=[None, "hic", "min"], default=None,
+                        help=("Create an animation from a seed. "
+                              "hic: movie with instantaneous Hi-C map"
+                              "min: images only"))
     parser.add_argument("-G", "--graph", action="store_true", default=False,
                         help=("Create graph of a seed's end state."))
 
@@ -92,9 +95,11 @@ def main():
             print(f" HDF5 created in {time.time() - t0}")
         # run_analysis(opts)
 
-    if opts.movie:
+    if opts.movie == "hic":
         hic_animation(opts)
         return
+    if opts.movie == "min":
+        min_animation(opts)
 
     # if opts.graph:
         # make_graphs(opts)
