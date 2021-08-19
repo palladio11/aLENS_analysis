@@ -101,7 +101,7 @@ def make_total_distr_plots(com_arr, log_contact_avg=None, hist_max=1.,
 
 
 def make_min_distr_plots(com_arr, log_contact_avg=None,
-                         hist_max=1., rel_ind=0, vmin=-50):
+                         hist_max=1., rel_ind=0, vmin=-30):
     fig, axarr = plt.subplots(1, 3, figsize=(26, 8))
     ax = axarr.flatten()
     pos_avg_arr, pos_std_arr, rad_pos_arr, rog_arr = get_all_rog_stats(
@@ -113,7 +113,7 @@ def make_min_distr_plots(com_arr, log_contact_avg=None,
         nbeads = com_arr.shape[0]
         x = np.arange(nbeads + 1)[::int((nbeads) / log_contact_avg.shape[0])]
         X, Y = np.meshgrid(x, x)
-        c = ax[2].pcolorfast(X, Y, log_contact_avg, vmin=-50)
+        c = ax[2].pcolorfast(X, Y, log_contact_avg, vmin=vmin)
         ax[2].set_aspect('equal')
         fig.colorbar(c, label="Log contact probability")
 
@@ -124,6 +124,24 @@ def make_min_distr_plots(com_arr, log_contact_avg=None,
         r'$\langle \sigma_{|{\bf r}_i - {\bf r}_0|}\rangle$ ($\mu$m)')
     ax[2].set_xlabel(r'Bead index')
     ax[2].set_ylabel(r'Bead index')
+    plt.tight_layout()
+
+    return fig, ax
+
+
+def make_hic_plot(com_arr, log_contact_avg, vmin=-30):
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    nbeads = com_arr.shape[0]
+    x = np.arange(nbeads + 1)[::int((nbeads) / log_contact_avg.shape[0])]
+    X, Y = np.meshgrid(x, x)
+    c = ax.pcolorfast(X, Y, log_contact_avg, vmin=vmin)
+    ax.set_aspect('equal')
+    fig.colorbar(c, label="Log contact probability")
+
+    ax.set_title(r'1 bead $\sim$ 200-400 bp')
+    ax.set_xlabel("Bead index")
+    ax.set_ylabel("Bead index")
     plt.tight_layout()
 
     return fig, ax

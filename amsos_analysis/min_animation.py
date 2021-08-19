@@ -25,7 +25,7 @@ def animate(i, fig, ax, png_paths, opts):
     ax.clear()
 
     png = plt.imread(str(png_paths[i]))
-    img = ax.imshow(png)
+    img = ax.imshow(png, resample=False)
     ax.set_axis_off()
 
     print(f'Making frame {i}')
@@ -65,10 +65,12 @@ def min_animation(opts):
     writer = FFMpegWriter(
         fps=opts.params['fps'],
         codec='libx264',
-        bitrate=-1,
+        # bitrate=20000,
         extra_args=[
-            '-pix_fmt',
-            'yuv420p'])
+            # '-vcodec', 'libx264',
+            '-pix_fmt', 'yuv420p',
+        ]
+    )
     vmax = 0
     ani = FuncAnimation(fig, animate, nframes,
                         fargs=(

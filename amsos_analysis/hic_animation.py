@@ -98,7 +98,7 @@ def animate(i, fig, axarr, fil_dat_paths, png_paths, init_mutable, opts):
         ax.clear()
 
     png = plt.imread(str(png_paths[i]))
-    img = axarr[0].imshow(png)
+    img = axarr[0].imshow(png, resample=False)
     axarr[0].set_axis_off()
 
     print(f'Making frame {i}')
@@ -158,7 +158,7 @@ def hic_animation(opts):
 
     # print(png_paths)
     init_mutable = [True]
-    nframes = len(fil_dat_paths)
+    nframes = len(png_paths)
     print(nframes)
     fig, axarr = plt.subplots(1, 2, figsize=(20, 8))
     axarr[1].set_aspect('equal')

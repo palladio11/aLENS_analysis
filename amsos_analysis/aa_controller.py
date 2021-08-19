@@ -58,13 +58,13 @@ def parse_args():
     opts = parser.parse_args()
 
     opts.params = {
-        'n_graph': 3,
-        'fps': 25,
+        'n_graph': 5,
+        'fps': 12,
         'style': "log_contact",
         'downsample': 1,
         'vmin': -20,
-        'bead_range': [0, 520],
-        # 'bead_range': None,
+        # 'bead_range': [0, 520],
+        'bead_range': None,
     }
 
     # Post parsing changes to options
@@ -103,8 +103,11 @@ def main():
 
     # if opts.graph:
         # make_graphs(opts)
-    h5_data.flush()
-    h5_data.close()
+    try:
+        h5_data.flush()
+        h5_data.close()
+    except BaseException:
+        pass
 
 
 ##########################################
