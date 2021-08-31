@@ -141,7 +141,7 @@ def calcPolarP(PList):
     # mean
     # print('Entries in list: ', len(PList))
     N = PList.shape[0]
-    polarOrder = np.array([0, 0, 0])
+    polarOrder = np.zeros(3)
     for i in range(N):
         p = PList[i]
         polarOrder = polarOrder + p
