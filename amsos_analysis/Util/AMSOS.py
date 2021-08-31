@@ -201,6 +201,7 @@ class FrameVTK:
 
     def __init__(self, dataFile):
         self.data = {}  # dict, dataname -> np.array
+        self.filename = dataFile
         self.parseFile(dataFile)
 
     def parseFile(self, dataFile):
