@@ -11,16 +11,19 @@ center = np.array([100.0, 100.0, 100.0])
 Ri = 5.0
 Ro = 5.102
 Rc = (Ri+Ro)*0.5
-mesh_order = 20
 LMT = 0.25
 radAve = LMT
+
+mesh_order = 100
+nseg = 20  # split each MT into nseg segments
 
 foldername = 'LocalOrder'
 
 
 # a cylinder with height Ro-Ri, approximate
-volAve = 4*np.pi*radAve*radAve*(Ro-Ri)
+volAve = np.pi*radAve*radAve*(Ro-Ri)
 volMT = (np.pi*(0.0125**2)*LMT)+4*np.pi*(0.0125**3)/3
+volSeg = volMT/nseg
 
 try:
     os.mkdir(foldername)
@@ -43,12 +46,19 @@ def calcLocalOrder(frame, pts, rad):
     # step2: sample the vicinity of every pts
     # step3: compute average vol, P, S for every point
     TList = frame.TList
-    minus = TList[:, 2:5]
-    plus = TList[:, 5:8]
-    centers = 0.5*(minus+plus)
-    vecs = plus-minus
-    norms = np.linalg.norm(vecs, axis=1)
-    vecs = vecs / norms[:, np.newaxis]
+    Tm = TList[:, 2:5]
+    Tp = TList[:, 5:8]
+    Tvec = Tp-Tm  # vector
+    Tlen = np.linalg.norm(Tvec, axis=1)  # length
+    Tdct = Tvec/Tlen[:, np.newaxis]  # unit vector
+    NMT = TList.shape[0]
+    centers = np.zeros((nseg*NMT, 3))
+    vecs = np.zeros((nseg*NMT, 3))
+
+    for i in range(nseg):
+        centers[i*NMT:(i+1)*NMT, :] = Tm+(i*1.0/nseg+0.5) * Tvec
+        vecs[i*NMT:(i+1)*NMT, :] = Tdct
+
     tree = ss.cKDTree(centers)
     search = tree.query_ball_point(pts, rad, workers=-1, return_sorted=False)
     N = pts.shape[0]
@@ -63,7 +73,7 @@ def calcLocalOrder(frame, pts, rad):
             nematic[i] = 0
         else:
             PList = vecs[idx]
-            volfrac[i] = len(idx)*volMT/volAve
+            volfrac[i] = len(idx)*volSeg/volAve
             polarity[i, :] = am.calcPolarP(PList)
             nematic[i] = am.calcNematicS(PList)
 
@@ -77,6 +87,6 @@ def calcLocalOrder(frame, pts, rad):
 
 SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
 
-for file in SylinderFileList[:2]:
+for file in SylinderFileList:
     frame = am.FrameAscii(file, readProtein=False, sort=True, info=True)
     calcLocalOrder(frame, points, radAve)

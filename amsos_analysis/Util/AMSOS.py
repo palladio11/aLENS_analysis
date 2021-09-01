@@ -108,12 +108,27 @@ def orientOrder(orientList, count=False):
     return np.array([polarOrder[0], S])
 
 
+def calcNematicS(PList, weight=None):
+    '''PList must be a numpy array with shape (N,3), each row normalized'''
+    assert PList.shape[1] == 3
+    N = PList.shape[0]
+    nematicOrder = np.zeros(shape=(3, 3))
+    for i in range(3):
+        for j in range(3):
+            nematicOrder[i, j] = np.average(
+                PList[:, i]*PList[:, j], axis=0, weights=weight)
+    nematicOrder -= np.identity(3)/3.0
+    S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
+    return S
+
+
 @nb.njit(parallel=True)
-def calcNematicS(PList):
+def calcNematicS_numba(PList):
     '''PList must be a numpy array with shape (N,3), each row normalized'''
     # calc orientation
     # mean
     # print('Entries in list: ', len(PList))
+    assert PList.shape[1] == 3
     N = PList.shape[0]
     QList = np.zeros(shape=(N, 3, 3))
     nematicOrder = np.zeros((3, 3))
@@ -134,8 +149,16 @@ def calcNematicS(PList):
     return S
 
 
+def calcPolarP(PList, weight=None):
+    '''PList must be a numpy array with shape (N,3), each row normalized'''
+    assert PList.shape[1] == 3
+    polarOrder = np.average(PList, axis=0, weights=weight)
+    return polarOrder
+
+
 @nb.njit(parallel=True)
-def calcPolarP(PList):
+def calcPolarP_numba(PList):
+    assert PList.shape[1] == 3
     '''PList must be a numpy array with shape (N,3), each row normalized'''
     # calc orientation
     # mean
