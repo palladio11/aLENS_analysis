@@ -56,7 +56,7 @@ def calcLocalOrder(frame, pts, rad):
     vecs = np.zeros((nseg*NMT, 3))
 
     for i in range(nseg):
-        centers[i*NMT:(i+1)*NMT, :] = Tm+(i*1.0/nseg+0.5) * Tvec
+        centers[i*NMT:(i+1)*NMT, :] = Tm+((i+0.5)*1.0/nseg) * Tvec
         vecs[i*NMT:(i+1)*NMT, :] = Tdct
 
     tree = ss.cKDTree(centers)
