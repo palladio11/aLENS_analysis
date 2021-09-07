@@ -1,5 +1,6 @@
 import numpy as np
 import re
+from datetime import datetime
 
 import Util.AMSOS as am
 
@@ -19,44 +20,60 @@ print('maxline: ', args.maxline)
 # [2021-09-06 16:10:51.194] [rank 0] [warning] CurrentStep 36255
 # or
 # [2021-09-06 16:12:00.532] [rank 0] [info] RECORD:
+# parse time as this:
+# datetime.strptime('[2021-09-06 16:10:51.194]', '[%Y-%m-%d %H:%M:%S.%f]')
+
+prev_time = None
+
 
 def parseOneStep(lines):
     '''parse lines starts from "CurrentTime xxx.xxx" '''
-    timestamp = np.nan
+    time = np.nan
+    step = np.nan
     wtime_mainloop = np.nan
     wtime_bcqp = np.nan
     bcqp_steps = np.nan
     bcqp_residue = np.nan
+    global prev_time
+
+    # parse time from the first line, should contain time and 'CurrentTime'
+    time_str = lines[0][:25]
+    cur_time = datetime.strptime(time_str, '[%Y-%m-%d %H:%M:%S.%f]')
+    if prev_time:
+        time = (cur_time-prev_time)
+        wtime_mainloop = time.total_seconds()
+    prev_time = cur_time
 
     # preprocess, remove spdlog headers
     msg_levels = ['[trace]',
                   '[debug]',
                   '[info]',
-                  '[warn]',
+                  '[warning]',
                   '[err]',
                   '[critical]']
+
     newlines = []
     for line in lines:
         for level in msg_levels:
             pos = line.find(level)
             if pos != -1:
                 newlines.append(line[pos+len(level)+1:])
+                break
 
     for line in newlines:
         if line.startswith('CurrentTime'):
-            timestamp = float(line.split(' ')[1])
+            time = float(line.split()[1])
+        if line.startswith('CurrentStep'):
+            step = float(line.split()[1])
         if line.startswith('RECORD: BCQP residue'):
             data = line.split(',')
             bcqp_steps = float(data[-1])
             bcqp_residue = float(data[-2])
-        if line.startswith('AMSOS main loop'):
-            data = re.split(' +', line)
-            wtime_mainloop = float(data[5])
         if line.startswith('SylinderSystem::SolveConstraints'):
             data = re.split(' +', line)
             wtime_bcqp = float(data[3])
 
-    return [timestamp, wtime_bcqp, wtime_mainloop, bcqp_steps, bcqp_residue]
+    return [time, step, wtime_bcqp, wtime_mainloop, bcqp_steps, bcqp_residue]
 
 
 file = open(args.logfile, 'r')
@@ -79,6 +96,6 @@ for line in file:
     pass
 
 np.savetxt('logdata.txt', np.array(data), fmt='%.14g',
-           header='timestamp, wtime_bcqp, wtime_mainloop, bcqp_steps, bcqp_residue')
+           header='time, step, wtime_bcqp, wtime_mainloop, bcqp_steps, bcqp_residue')
 
 file.close()
