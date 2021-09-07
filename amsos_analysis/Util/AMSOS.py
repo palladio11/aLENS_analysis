@@ -189,15 +189,37 @@ def calcCenterOrient(TList):
 
 
 def parseSylinderAscii(filename,  sort=True, info=False):
-    data = np.loadtxt(filename,
-                      skiprows=2, usecols=(1, 2, 3, 4, 5, 6, 7, 8))
-    if sort:
-        TList = data[data[:, 0].argsort()]  # sort by gid
-    else:
-        TList = data
+    fields = [('gid', np.int32), ('radius', np.float64),
+              ('mx', np.float64), ('my', np.float64), ('mz', np.float64),
+              ('px', np.float64), ('py', np.float64), ('pz', np.float64),
+              ('group', np.int32)
+              ]
+    data = np.loadtxt(filename, skiprows=2,
+                      usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9), dtype=fields)
     if info:
-        print(TList[:10])
-    return TList
+        print(data[:10])
+
+    if sort:
+        data = np.sort(data, order='gid')  # sort by gid
+
+    return data
+
+
+def parseProteinAscii(filename, sort=True, info=False):
+    fields = [('gid', np.int32), ('tag', np.int32),
+              ('mx', np.float64), ('my', np.float64), ('mz', np.float64),
+              ('px', np.float64), ('py', np.float64), ('pz', np.float64),
+              ('idbind0', np.int32), ('idbind1', np.int32)
+              ]
+    data = np.loadtxt(filename, skiprows=2,
+                      usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), dtype=fields)
+    if info:
+        print(data[:10])
+
+    if sort:
+        data = np.sort(data, order='gid')  # sort by gid
+
+    return data
 
 
 class FrameAscii:
@@ -209,14 +231,7 @@ class FrameAscii:
 
         if readProtein:
             filename = filename.replace('Sylinder', 'Protein')
-            data = np.loadtxt(filename, skiprows=2,
-                              usecols=(9, 10), dtype=np.int)
-            if sort:
-                self.PList = data[data[:, 0].argsort()]  # sort by gid
-            else:
-                self.PList = data
-            if info:
-                print(self.PList[:10])
+            self.PList = parseProteinAscii(filename, sort, info)
 
 
 class FrameVTK:
