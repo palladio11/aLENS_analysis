@@ -15,6 +15,11 @@ print('logfile: ', args.logfile)
 print('maxline: ', args.maxline)
 
 
+# spdlong line example:
+# [2021-09-06 16:10:51.194] [rank 0] [warning] CurrentStep 36255
+# or
+# [2021-09-06 16:12:00.532] [rank 0] [info] RECORD:
+
 def parseOneStep(lines):
     '''parse lines starts from "CurrentTime xxx.xxx" '''
     timestamp = np.nan
@@ -23,7 +28,21 @@ def parseOneStep(lines):
     bcqp_steps = np.nan
     bcqp_residue = np.nan
 
+    # preprocess, remove spdlog headers
+    msg_levels = ['[trace]',
+                  '[debug]',
+                  '[info]',
+                  '[warn]',
+                  '[err]',
+                  '[critical]']
+    newlines = []
     for line in lines:
+        for level in msg_levels:
+            pos = line.find(level)
+            if pos != -1:
+                newlines.append(line[pos+len(level)+1:])
+
+    for line in newlines:
         if line.startswith('CurrentTime'):
             timestamp = float(line.split(' ')[1])
         if line.startswith('RECORD: BCQP residue'):
@@ -46,7 +65,8 @@ data = []
 count = 0
 append = False  # skip until first CurrentTime tag
 for line in file:
-    if line.startswith('CurrentTime'):
+    pos = line.find('CurrentTime')
+    if pos != -1:
         if append:
             data.append(parseOneStep(msg_onestep))
         msg_onestep.clear()

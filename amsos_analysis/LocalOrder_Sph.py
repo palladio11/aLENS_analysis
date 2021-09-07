@@ -15,7 +15,7 @@ Rc = (Ri+Ro)*0.5
 LMT = 0.25
 radAve = LMT
 
-mesh_order = 30
+mesh_order = 100
 nseg = 20  # split each MT into nseg segments
 
 foldername = 'LocalOrder'
@@ -112,6 +112,6 @@ def calcLocalOrder(frame, pts, rad):
 
 SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
 
-for file in SylinderFileList[:5]:
+for file in SylinderFileList:
     frame = am.FrameAscii(file, readProtein=True, sort=False, info=True)
     calcLocalOrder(frame, points, radAve)
