@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.recfunctions import repack_fields, structured_to_unstructured
 import os
 import scipy.spatial as ss
 import meshzoo
@@ -14,7 +15,7 @@ Rc = (Ri+Ro)*0.5
 LMT = 0.25
 radAve = LMT
 
-mesh_order = 100
+mesh_order = 30
 nseg = 20  # split each MT into nseg segments
 
 foldername = 'LocalOrder'
@@ -45,9 +46,10 @@ def calcLocalOrder(frame, pts, rad):
     # step1: build cKDTree with TList center
     # step2: sample the vicinity of every pts
     # step3: compute average vol, P, S for every point
+
     TList = frame.TList
-    Tm = TList[:, 2:5]
-    Tp = TList[:, 5:8]
+    Tm = structured_to_unstructured(TList[['mx', 'my', 'mz']])
+    Tp = structured_to_unstructured(TList[['px', 'py', 'pz']])
     Tvec = Tp-Tm  # vector
     Tlen = np.linalg.norm(Tvec, axis=1)  # length
     Tdct = Tvec/Tlen[:, np.newaxis]  # unit vector
@@ -72,21 +74,44 @@ def calcLocalOrder(frame, pts, rad):
             polarity[i, :] = np.array([0, 0, 0])
             nematic[i] = 0
         else:
-            PList = vecs[idx]
+            vecList = vecs[idx]
             volfrac[i] = len(idx)*volSeg/volAve
-            polarity[i, :] = am.calcPolarP(PList)
-            nematic[i] = am.calcNematicS(PList)
+            polarity[i, :] = am.calcPolarP(vecList)
+            nematic[i] = am.calcNematicS(vecList)
+
+    PList = frame.PList
+    Pm = structured_to_unstructured(PList[['mx', 'my', 'mz']])
+    Pp = structured_to_unstructured(PList[['px', 'py', 'pz']])
+    Pbind = structured_to_unstructured(PList[['idbind0', 'idbind1']])
+    xlinker_n_all = np.zeros(N)
+    xlinker_n_db = np.zeros(N)
+    centers = 0.5*(Pm+Pp)
+    tree = ss.cKDTree(centers)
+    search = tree.query_ball_point(pts, rad, workers=-1, return_sorted=False)
+    for i in range(N):
+        idx = search[i]
+        if len(idx) == 0:
+            xlinker_n_all[i] = 0
+            xlinker_n_db[i] = 0
+        else:
+            xlinker_n_all[i] = len(idx)/volAve
+            xList = Pbind[idx]
+            xlinker_n_db[i] = np.count_nonzero(np.logical_and(
+                xList[:, 0] != -1, xList[:, 1] != -1))/volAve
 
     name = am.get_basename(frame.filename)
     meshio.write_points_cells(foldername+"/sphere_{}.vtu".format(name), points,
                               cells=[("triangle", cells)],
                               point_data={'volfrac': volfrac,
                                           'nematic': nematic,
-                                          'polarity': polarity})
+                                          'polarity': polarity,
+                                          'xlinker_n_all': xlinker_n_all,
+                                          'xlinker_n_db': xlinker_n_db
+                                          })
 
 
 SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
 
-for file in SylinderFileList:
-    frame = am.FrameAscii(file, readProtein=False, sort=True, info=True)
+for file in SylinderFileList[:5]:
+    frame = am.FrameAscii(file, readProtein=True, sort=False, info=True)
     calcLocalOrder(frame, points, radAve)
