@@ -90,6 +90,11 @@ def normalize(vec):
     return vec/np.sqrt(vec.dot(vec))
 
 
+def normalize_all(vec):
+    '''vec.shape == [N, dim]'''
+    return vec/np.linalg.norm(vec, axis=1)[:, np.newaxis]
+
+
 @nb.njit
 def findMove(x0, x1, L):
     '''x0,x1,L must be scalar FP numbers'''

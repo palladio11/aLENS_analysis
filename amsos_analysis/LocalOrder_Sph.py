@@ -8,20 +8,37 @@ import numba as nb
 
 import Util.AMSOS as am
 
-center = np.array([100.0, 100.0, 100.0])
-Ri = 5.0
-Ro = 5.102
-Rc = (Ri+Ro)*0.5
-radAve = 0.25
 
-mesh_order = 100
-nseg = 20  # split each MT into nseg segments
+parser = am.getDefaultArgParser('calc local stat on a spherical shell')
 
+parser.add_argument('-r', '--rad', type=float,
+                    default=0.25,
+                    help='average radius')
+parser.add_argument('-n', '--nseg', type=int,
+                    default=20,
+                    help='number of segments per each MT')
+parser.add_argument('-m', '--mesh', type=int,
+                    default=50,
+                    help='order of icosa mesh')
+
+args = parser.parse_args()
+
+config = am.parseConfig(args.config)
+
+R0 = config['boundaries'][0]['radius']
+R1 = config['boundaries'][1]['radius']
+
+center = np.array(config['boundaries'][0]['center'])
+Rc = (R0+R1)*0.5
+radAve = args.rad
+nseg = args.nseg  # split each MT into nseg segments
+mesh_order = args.mesh
+
+print(center, Rc, radAve, nseg, mesh_order)
+
+exit()
 foldername = 'LocalOrder'
 
-
-# a cylinder with height Ro-Ri, approximate
-volAve = np.pi*radAve*radAve*(Ro-Ri)
 
 try:
     os.mkdir(foldername)
@@ -45,7 +62,7 @@ for i in range(points.shape[0]):
     p = p*Rc
     points[i, :] = p+center
 
-etheta = etheta/np.linalg.norm(etheta, axis=1)[:, np.newaxis]  # unit vector
+etheta = am.normalize_all(etheta)  # unit vectors
 
 
 def calcLocalOrder(frame, pts, rad):
@@ -53,6 +70,9 @@ def calcLocalOrder(frame, pts, rad):
     # step1: build cKDTree with TList center
     # step2: sample the vicinity of every pts
     # step3: compute average vol, P, S for every point
+
+    # a cylinder with height Ro-Ri, approximate
+    volAve = np.pi*radAve*radAve*(Ro-Ri)
 
     TList = frame.TList
     Tm = structured_to_unstructured(TList[['mx', 'my', 'mz']])
