@@ -14,6 +14,16 @@ import yaml
 import numba as nb
 
 
+def volCyl(rad, h):
+    '''cylinder volume'''
+    return np.pi*(rad**2)*h
+
+
+def volMT(rad, h):
+    '''spherocylinder volume'''
+    return volCyl(rad, h) + (4.0/3.0)*np.pi*(rad**3)
+
+
 def get_basename(filename):
     return os.path.splitext(os.path.basename(filename))[0]
 

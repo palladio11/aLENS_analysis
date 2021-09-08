@@ -12,8 +12,7 @@ center = np.array([100.0, 100.0, 100.0])
 Ri = 5.0
 Ro = 5.102
 Rc = (Ri+Ro)*0.5
-LMT = 0.25
-radAve = LMT
+radAve = 0.25
 
 mesh_order = 100
 nseg = 20  # split each MT into nseg segments
@@ -23,22 +22,30 @@ foldername = 'LocalOrder'
 
 # a cylinder with height Ro-Ri, approximate
 volAve = np.pi*radAve*radAve*(Ro-Ri)
-volMT = (np.pi*(0.0125**2)*LMT)+4*np.pi*(0.0125**3)/3
-volSeg = volMT/nseg
 
 try:
     os.mkdir(foldername)
 except FileExistsError:
     pass
 
-# create a spherical mesh on center and Rc
-# points, cells = meshzoo.uv_sphere(
-    # num_points_per_circle=mesh_order, num_circles=mesh_order)
+
+def calcOrient(vec):
+    '''vec must be on a sphere centered at [0,0,0]'''
+    rxy = np.linalg.norm(vec[:2])
+    z = vec[2]
+    return np.array([z*vec[0]/rxy, z*vec[1]/rxy, -rxy])
+
+
 points, cells = meshzoo.icosa_sphere(mesh_order)
+
+etheta = np.zeros((points.shape[0], 3))  # e_theta norm vectors
 for i in range(points.shape[0]):
     p = points[i, :]
+    etheta[i, :] = calcOrient(p)
     p = p*Rc
     points[i, :] = p+center
+
+etheta = etheta/np.linalg.norm(etheta, axis=1)[:, np.newaxis]  # unit vector
 
 
 def calcLocalOrder(frame, pts, rad):
@@ -54,29 +61,34 @@ def calcLocalOrder(frame, pts, rad):
     Tlen = np.linalg.norm(Tvec, axis=1)  # length
     Tdct = Tvec/Tlen[:, np.newaxis]  # unit vector
     NMT = TList.shape[0]
-    centers = np.zeros((nseg*NMT, 3))
-    vecs = np.zeros((nseg*NMT, 3))
+    seg_center = np.zeros((nseg*NMT, 3))
+    seg_vec = np.zeros((nseg*NMT, 3))
+    seg_len = np.zeros(nseg*NMT)
 
     for i in range(nseg):
-        centers[i*NMT:(i+1)*NMT, :] = Tm+((i+0.5)*1.0/nseg) * Tvec
-        vecs[i*NMT:(i+1)*NMT, :] = Tdct
+        seg_center[i*NMT:(i+1)*NMT, :] = Tm+((i+0.5)*1.0/nseg) * Tvec
+        seg_vec[i*NMT:(i+1)*NMT, :] = Tdct
+        seg_len[i*NMT:(i+1)*NMT] = Tlen/nseg
 
-    tree = ss.cKDTree(centers)
+    tree = ss.cKDTree(seg_center)
     search = tree.query_ball_point(pts, rad, workers=-1, return_sorted=False)
     N = pts.shape[0]
     volfrac = np.zeros(N)
     nematic = np.zeros(N)
     polarity = np.zeros((N, 3))
+    polarity_theta = np.zeros(N)
     for i in range(N):
         idx = search[i]
         if len(idx) == 0:
             volfrac[i] = 0
             polarity[i, :] = np.array([0, 0, 0])
+            polarity_theta[i] = 0
             nematic[i] = 0
         else:
-            vecList = vecs[idx]
-            volfrac[i] = len(idx)*volSeg/volAve
+            vecList = seg_vec[idx]
+            volfrac[i] = am.volMT(0.0125, np.sum(seg_len[idx]))/volAve
             polarity[i, :] = am.calcPolarP(vecList)
+            polarity_theta[i] = np.dot(polarity[i], etheta[i])
             nematic[i] = am.calcNematicS(vecList)
 
     PList = frame.PList
@@ -105,6 +117,7 @@ def calcLocalOrder(frame, pts, rad):
                               point_data={'volfrac': volfrac,
                                           'nematic': nematic,
                                           'polarity': polarity,
+                                          'polarity_theta': polarity_theta,
                                           'xlinker_n_all': xlinker_n_all,
                                           'xlinker_n_db': xlinker_n_db
                                           })
@@ -112,6 +125,6 @@ def calcLocalOrder(frame, pts, rad):
 
 SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
 
-for file in SylinderFileList:
+for file in SylinderFileList[:5]:
     frame = am.FrameAscii(file, readProtein=True, sort=False, info=True)
     calcLocalOrder(frame, points, radAve)
