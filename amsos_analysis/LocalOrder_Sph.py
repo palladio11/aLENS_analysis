@@ -49,6 +49,8 @@ except FileExistsError:
 def calcOrient(vec):
     '''vec must be on a sphere centered at [0,0,0]'''
     rxy = np.linalg.norm(vec[:2])
+    if rxy < 1e-7:
+        return np.array([1, 0, 0])  # pole singularity
     z = vec[2]
     return np.array([z*vec[0]/rxy, z*vec[1]/rxy, -rxy])
 
