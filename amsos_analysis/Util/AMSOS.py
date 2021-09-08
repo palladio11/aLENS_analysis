@@ -29,7 +29,7 @@ def cart2sph(xyz):
 def e_sph(xyz):
     '''compute spherical basis vectors at vec on a spherical surface'''
     assert xyz.shape[1] == 3
-    sph_coord = am.cart2sph(xyz)
+    sph_coord = cart2sph(xyz)
     theta = sph_coord[:, 1]
     phi = sph_coord[:, 2]
     er = np.vstack([np.sin(theta)*np.cos(phi), np.sin(theta)
