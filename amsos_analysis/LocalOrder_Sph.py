@@ -1,10 +1,9 @@
 import numpy as np
-from numpy.lib.recfunctions import repack_fields, structured_to_unstructured
 import os
+from numpy.lib.recfunctions import structured_to_unstructured
 import scipy.spatial as ss
 import meshzoo
 import meshio
-import numba as nb
 
 import Util.AMSOS as am
 
@@ -40,19 +39,24 @@ foldername = 'LocalOrder'
 print(center, Rc, radAve, nseg, mesh_order, foldername, volAve)
 
 
-try:
-    os.mkdir(foldername)
-except FileExistsError:
-    pass
+am.mkdir(foldername)
 
 
-def calcOrient(vec):
-    '''vec must be on a sphere centered at [0,0,0]'''
+def e_t(vec):
+    '''calc norm vector e_theta, vec must be on a sphere centered at [0,0,0]'''
     rxy = np.linalg.norm(vec[:2])
     if rxy < 1e-7:
         return np.array([1, 0, 0])  # pole singularity
     z = vec[2]
-    return np.array([z*vec[0]/rxy, z*vec[1]/rxy, -rxy])
+    ev = np.array([z*vec[0]/rxy, z*vec[1]/rxy, -rxy])
+    ev = ev / np.linalg.norm(ev)
+    return ev
+
+
+def e_r(vec):
+    '''calc norm vector e_r, vec must be on a sphere centered at [0,0,0]'''
+    er = vec/np.linalg.norm(vec)
+    return er
 
 
 points, cells = meshzoo.icosa_sphere(mesh_order)
@@ -60,11 +64,9 @@ points, cells = meshzoo.icosa_sphere(mesh_order)
 etheta = np.zeros((points.shape[0], 3))  # e_theta norm vectors
 for i in range(points.shape[0]):
     p = points[i, :]
-    etheta[i, :] = calcOrient(p)
+    etheta[i, :] = e_t(p)
     p = p*Rc
     points[i, :] = p+center
-
-etheta = am.normalize_all(etheta)  # unit vectors
 
 
 def calcLocalOrder(frame, pts, rad):

@@ -14,6 +14,32 @@ import yaml
 import numba as nb
 
 
+def cart2sph(xyz):
+    '''xyz.shape==(N,3), xyz => r, theta, phi'''
+    assert xyz.shape[1] == 3
+    xy = xyz[:, 0]**2 + xyz[:, 1]**2
+
+    ptsnew = np.zeros(xyz.shape)
+    ptsnew[:, 0] = np.sqrt(xy + xyz[:, 2]**2)  # r
+    ptsnew[:, 1] = np.arctan2(np.sqrt(xy), xyz[:, 2])  # theta
+    ptsnew[:, 2] = np.arctan2(xyz[:, 1], xyz[:, 0])  # phi
+    return ptsnew
+
+
+def e_sph(xyz):
+    '''compute spherical basis vectors at vec on a spherical surface'''
+    assert xyz.shape[1] == 3
+    sph_coord = am.cart2sph(xyz)
+    theta = sph_coord[:, 1]
+    phi = sph_coord[:, 2]
+    er = np.vstack([np.sin(theta)*np.cos(phi), np.sin(theta)
+                   * np.sin(phi), np.cos(theta)])
+    et = np.vstack([np.cos(theta)*np.cos(phi), np.cos(theta)
+                   * np.sin(phi), -np.sin(theta)])
+    ep = np.vstack([-np.sin(phi), np.cos(phi), np.zeros(phi.shape[0])])
+    return er.T, et.T, ep.T
+
+
 def volCyl(rad, h):
     '''cylinder volume'''
     return np.pi*(rad**2)*h
@@ -22,6 +48,16 @@ def volCyl(rad, h):
 def volMT(rad, h):
     '''spherocylinder volume'''
     return volCyl(rad, h) + (4.0/3.0)*np.pi*(rad**3)
+
+
+def mkdir(foldername):
+    '''mkdir, skip if existing'''
+    try:
+        print('mkdir '+foldername)
+        os.mkdir(foldername)
+    except FileExistsError:
+        print('folder already exists')
+    return
 
 
 def get_basename(filename):
