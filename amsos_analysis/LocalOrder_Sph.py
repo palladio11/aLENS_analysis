@@ -33,11 +33,11 @@ Rc = (R0+R1)*0.5
 radAve = args.rad
 nseg = args.nseg  # split each MT into nseg segments
 mesh_order = args.mesh
-
-print(center, Rc, radAve, nseg, mesh_order)
-
-exit()
+# a cylinder with height R1-R0, approximate
+volAve = np.pi*radAve*radAve*np.abs(R1-R0)
 foldername = 'LocalOrder'
+
+print(center, Rc, radAve, nseg, mesh_order, foldername, volAve)
 
 
 try:
@@ -70,9 +70,6 @@ def calcLocalOrder(frame, pts, rad):
     # step1: build cKDTree with TList center
     # step2: sample the vicinity of every pts
     # step3: compute average vol, P, S for every point
-
-    # a cylinder with height Ro-Ri, approximate
-    volAve = np.pi*radAve*radAve*(Ro-Ri)
 
     TList = frame.TList
     Tm = structured_to_unstructured(TList[['mx', 'my', 'mz']])
@@ -145,6 +142,6 @@ def calcLocalOrder(frame, pts, rad):
 
 SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
 
-for file in SylinderFileList[:5]:
+for file in SylinderFileList:
     frame = am.FrameAscii(file, readProtein=True, sort=False, info=True)
     calcLocalOrder(frame, points, radAve)
