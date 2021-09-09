@@ -17,7 +17,7 @@ foldername = 'Traj2PolyLines'
 # avoid too many small files
 # a few hundred is ok
 
-rng = np.random.default_rng()
+rng = np.random.default_rng(seed=0)
 gids = rng.integers(low=0, high=100000, size=100)
 
 
@@ -27,6 +27,7 @@ def polyline_from_points(points):
     the_cell = np.arange(0, len(points), dtype=np.int_)
     the_cell = np.insert(the_cell, 0, len(points))
     poly.lines = the_cell
+    poly["step"] = np.arange(poly.n_points)
     return poly
 
 
@@ -74,5 +75,5 @@ def mergePolyline():
 
 
 am.mkdir(foldername)
-# traj2Polyline(h5name, gids)
+traj2Polyline(h5name, gids)
 mergePolyline()

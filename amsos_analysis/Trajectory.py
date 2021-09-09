@@ -10,16 +10,10 @@ import Util.HDF5_Wrapper as h5
 
 parser = am.getDefaultArgParser(
     'Calculate net displacement along certain direction')
-parser.add_argument('--calcmean', type=bool, dest='calcmean', default=False,
-                    help='if calculate moving average')
-parser.add_argument('--velmax', type=float, dest='velmax', default=1.0,
-                    help='vel max (um/s) for histogram')
-parser.add_argument('--avg', type=int, nargs='+', dest='avg', default=[10, 20, 50, 100],
-                    help='moving average for every ... snapshots')
-parser.add_argument('--axis', type=int, dest='axis', default=0,
-                    help='0,1,2 -> x,y,z axis')
-parser.add_argument('--overwrite', type=bool, dest='overwrite', default=True,
-                    help='overwrite existing npy files')
+parser.add_argument('--start', type=int, dest='start', default=0,
+                    help='start frame number of traj')
+parser.add_argument('--end', type=int, dest='end', default=0,
+                    help='end frame number of traj')
 
 args = parser.parse_args()
 
@@ -28,9 +22,6 @@ boxsize = np.array(config['simBoxHigh'])-np.array(config['simBoxLow'])
 pbc = np.array(config['simBoxPBC'])
 deltat = config['timeSnap']  # time between two snapshots
 
-
-avgWindow = args.avg  # moving average for every ... snapshots
-vel_max = args.velmax  # um/s for histogram
 
 h5name = 'Trajectory'
 h5.newFile(h5name)
@@ -43,20 +34,20 @@ def calcTc(TList):
     return Tc
 
 
-def genTrajectory(files):
+def genTrajectory(files, start=0, end=-1):
     '''calculate center of mass trajectory and save as hdf5'''
     frame = am.FrameAscii(
-        files[0], readProtein=False, sort=True, info=True)
+        files[start], readProtein=False, sort=True, info=True)
 
     nMT = frame.TList.shape[0]
     Tc = calcTc(frame.TList)  # center of mass
 
     traj = Tc.copy()  # traj from t=0
-    h5.saveData(h5name, traj, '/t_{:08d}'.format(0), 'traj', float)
+    h5.saveData(h5name, traj, '/t_{:08d}'.format(start), 'traj', float)
 
     prev_Tc = None
-    # for j in range(1, len(files)):
-    for j in range(1, 5):
+    end = len(files)+end+1 if end < 0 else end
+    for j in range(start+1, end):
         prev_Tc = Tc
         Tc = calcTc(am.FrameAscii(
             files[j], readProtein=False, sort=True, info=True).TList)
@@ -76,4 +67,4 @@ def genTrajectory(files):
 
 
 SylinderFileList = am.getFileListSorted('result*-*/SylinderAscii_*.dat')
-genTrajectory(SylinderFileList)
+genTrajectory(SylinderFileList, args.start, args.end)
