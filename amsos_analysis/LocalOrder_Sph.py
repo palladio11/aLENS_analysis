@@ -46,7 +46,7 @@ class Param:
         points = points*Rc
         self.points = points + center[np.newaxis, :]
 
-        print(', '.join("%s: %s" % item for item in vars(self).items()))
+        print(', \n'.join("%s: %s" % item for item in vars(self).items()))
 
         return
 
