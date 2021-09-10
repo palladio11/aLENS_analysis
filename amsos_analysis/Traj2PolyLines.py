@@ -9,6 +9,7 @@ import glob
 import pyvista as pv
 import vtk
 import Util.AMSOS as am
+from codetiming import Timer
 
 h5name = 'Trajectory'
 foldername = 'Traj2PolyLines'
@@ -17,8 +18,19 @@ foldername = 'Traj2PolyLines'
 # avoid too many small files
 # a few hundred is ok
 
+parser = am.getDefaultArgParser(
+    'Calculate net displacement along certain direction')
+parser.add_argument('--ntraj', type=int, dest='ntraj', default=100,
+                    help='number of trajs')
+parser.add_argument('--start', type=int, dest='start', default=0,
+                    help='start frame number of traj')
+parser.add_argument('--end', type=int, dest='end', default=-1,
+                    help='end frame number of traj')
+
+args = parser.parse_args()
+
 rng = np.random.default_rng(seed=0)
-gids = rng.integers(low=0, high=100000, size=100)
+gids = rng.integers(low=0, high=100000, size=args.ntraj)
 
 
 def polyline_from_points(points):
@@ -31,7 +43,8 @@ def polyline_from_points(points):
     return poly
 
 
-def traj2Polyline(h5name, gid_choice=[]):
+@Timer("One Polyline")
+def traj2Polyline(h5name, gid_choice=[], start=0, end=-1):
     '''convert hdf5 trajectory to polylines'''
     file = h5py.File(h5name+'.hdf5', 'r')
     steps = list(file.keys())
@@ -46,11 +59,13 @@ def traj2Polyline(h5name, gid_choice=[]):
         if gid < 0 or gid >= nTraj:
             print('invalid gid: ', gid)
             continue
-        pts = np.zeros([nSteps, 3])
-        for k in range(nSteps):
-            pts[k, :] = np.array(file[steps[k]]['traj'])[gid, :]
+        end = nSteps+end+1 if end < 0 else end
+        pts = np.zeros([end-start, 3])
+        for k in range(start, end):
+            pts[k-start, :] = np.array(file[steps[k]]['traj'])[gid, :]
         pl = polyline_from_points(pts)
-        pl.save(foldername+'/TrajVTK_{:08d}.vtp'.format(gid), binary=True)
+        pl.save(
+            foldername+'/TrajVTK_{:08d}_{:d}_{:d}.vtp'.format(gid, start, end), binary=True)
 
     file.close()
     return
@@ -60,7 +75,8 @@ def mergePolyline():
     '''merge all vtk polylines into a single file'''
     reader = vtk.vtkXMLPolyDataReader()
     append = vtk.vtkAppendPolyData()
-    filenames = glob.glob(foldername+'/TrajVTK_*.vtp')
+    filenames = glob.glob(
+        foldername+'/TrajVTK_*_{:d}_{:d}.vtp'.format(args.start, args.end))
     for file in filenames:
         reader.SetFileName(file)
         reader.Update()
@@ -69,11 +85,11 @@ def mergePolyline():
         append.AddInputData(polydata)
     append.Update()
     writer = vtk.vtkXMLPolyDataWriter()
-    writer.SetFileName('TrajAll.vtp')
+    writer.SetFileName('TrajAll_{:d}_{:d}.vtp'.format(args.start, args.end))
     writer.SetInputData(append.GetOutput())
     writer.Write()
 
 
 am.mkdir(foldername)
-traj2Polyline(h5name, gids)
+traj2Polyline(h5name, gids, args.start, args.end)
 mergePolyline()
