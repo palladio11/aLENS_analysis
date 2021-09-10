@@ -55,15 +55,16 @@ def traj2Polyline(h5name, gid_choice=[], start=0, end=-1):
         gid_choice = range(nTraj)
     print('gid_choice: ', gid_choice)
 
-    for gid in gid_choice:
-        if gid < 0 or gid >= nTraj:
-            print('invalid gid: ', gid)
-            continue
-        end = nSteps+end+1 if end < 0 else end
-        pts = np.zeros([end-start, 3])
-        for k in range(start, end):
-            pts[k-start, :] = np.array(file[steps[k]]['traj'])[gid, :]
-        pl = polyline_from_points(pts)
+    end = nSteps+end+1 if end < 0 else end
+    pts = np.zeros((len(gid_choice), end-start, 3))
+
+    for k in range(start, end):
+        pts[:, k-start,
+            :] = np.array(file[steps[k]]['traj'])[gid_choice, :]
+
+    for i in range(len(gid_choice)):
+        gid = gid_choice[i]
+        pl = polyline_from_points(pts[i])
         pl.save(
             foldername+'/TrajVTK_{:08d}_{:d}_{:d}.vtp'.format(gid, start, end), binary=True)
 
