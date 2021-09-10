@@ -1,5 +1,5 @@
+from dask.distributed import Client
 import numpy as np
-import os
 from numpy.lib.recfunctions import structured_to_unstructured
 import scipy.spatial as ss
 import meshzoo
@@ -35,45 +35,25 @@ mesh_order = args.mesh
 # a cylinder with height R1-R0, approximate
 volAve = np.pi*radAve*radAve*np.abs(R1-R0)
 foldername = 'LocalOrder'
+am.mkdir(foldername)
 
 print(center, Rc, radAve, nseg, mesh_order, foldername, volAve)
 
 
-am.mkdir(foldername)
-
-
-def e_t(vec):
-    '''calc norm vector e_theta, vec must be on a sphere centered at [0,0,0]'''
-    rxy = np.linalg.norm(vec[:2])
-    if rxy < 1e-7:
-        return np.array([1, 0, 0])  # pole singularity
-    z = vec[2]
-    ev = np.array([z*vec[0]/rxy, z*vec[1]/rxy, -rxy])
-    ev = ev / np.linalg.norm(ev)
-    return ev
-
-
-def e_r(vec):
-    '''calc norm vector e_r, vec must be on a sphere centered at [0,0,0]'''
-    er = vec/np.linalg.norm(vec)
-    return er
-
-
 points, cells = meshzoo.icosa_sphere(mesh_order)
-
-etheta = np.zeros((points.shape[0], 3))  # e_theta norm vectors
-for i in range(points.shape[0]):
-    p = points[i, :]
-    etheta[i, :] = e_t(p)
-    p = p*Rc
-    points[i, :] = p+center
+er, etheta, ep = am.e_sph(points)   # e_theta norm vectors
+# scale and shift
+points = points*Rc
+points = points + center[np.newaxis, :]
 
 
-def calcLocalOrder(frame, pts, rad):
+def calcLocalOrder(file, rad, pts, etheta):
     '''pts: sample points, rad: average radius'''
     # step1: build cKDTree with TList center
     # step2: sample the vicinity of every pts
     # step3: compute average vol, P, S for every point
+    print(file)
+    frame = am.FrameAscii(file, readProtein=True, sort=False, info=False)
 
     TList = frame.TList
     Tm = structured_to_unstructured(TList[['mx', 'my', 'mz']])
@@ -100,12 +80,7 @@ def calcLocalOrder(frame, pts, rad):
     polarity_theta = np.zeros(N)
     for i in range(N):
         idx = search[i]
-        if len(idx) == 0:
-            volfrac[i] = 0
-            polarity[i, :] = np.array([0, 0, 0])
-            polarity_theta[i] = 0
-            nematic[i] = 0
-        else:
+        if len(idx) != 0:
             vecList = seg_vec[idx]
             volfrac[i] = am.volMT(0.0125, np.sum(seg_len[idx]))/volAve
             polarity[i, :] = am.calcPolarP(vecList)
@@ -123,10 +98,7 @@ def calcLocalOrder(frame, pts, rad):
     search = tree.query_ball_point(pts, rad, workers=-1, return_sorted=False)
     for i in range(N):
         idx = search[i]
-        if len(idx) == 0:
-            xlinker_n_all[i] = 0
-            xlinker_n_db[i] = 0
-        else:
+        if len(idx) != 0:
             xlinker_n_all[i] = len(idx)/volAve
             xList = Pbind[idx]
             xlinker_n_db[i] = np.count_nonzero(np.logical_and(
@@ -144,8 +116,8 @@ def calcLocalOrder(frame, pts, rad):
                                           })
 
 
-SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
-
-for file in SylinderFileList:
-    frame = am.FrameAscii(file, readProtein=True, sort=False, info=True)
-    calcLocalOrder(frame, points, radAve)
+if __name__ == '__main__':
+    SylinderFileList = am.getFileListSorted(
+        './result*-*/SylinderAscii_*.dat', info=False)
+    for file in SylinderFileList:
+        calcLocalOrder(file, radAve, points, etheta)
