@@ -12,7 +12,7 @@ parser = am.getDefaultArgParser(
     'Calculate net displacement along certain direction')
 parser.add_argument('--start', type=int, dest='start', default=0,
                     help='start frame number of traj')
-parser.add_argument('--end', type=int, dest='end', default=0,
+parser.add_argument('--end', type=int, dest='end', default=-1,
                     help='end frame number of traj')
 
 args = parser.parse_args()
