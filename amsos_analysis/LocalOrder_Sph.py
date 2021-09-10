@@ -8,50 +8,62 @@ import meshio
 import Util.AMSOS as am
 
 
-parser = am.getDefaultArgParser('calc local stat on a spherical shell')
+class Param:
+    def __init__(self):
+        parser = am.getDefaultArgParser('calc local stat on a spherical shell')
+        parser.add_argument('-r', '--rad', type=float,
+                            default=0.25,
+                            help='average radius')
+        parser.add_argument('-n', '--nseg', type=int,
+                            default=20,
+                            help='number of segments per each MT')
+        parser.add_argument('-m', '--mesh', type=int,
+                            default=50,
+                            help='order of icosa mesh')
+        parser.add_argument('-s', '--stride', type=int,
+                            default=100,
+                            help='snapshot stride')
 
-parser.add_argument('-r', '--rad', type=float,
-                    default=0.25,
-                    help='average radius')
-parser.add_argument('-n', '--nseg', type=int,
-                    default=20,
-                    help='number of segments per each MT')
-parser.add_argument('-m', '--mesh', type=int,
-                    default=50,
-                    help='order of icosa mesh')
+        args = parser.parse_args()
+        self.stride = args.stride
+        config = am.parseConfig(args.config)
 
-args = parser.parse_args()
+        R0 = config['boundaries'][0]['radius']
+        R1 = config['boundaries'][1]['radius']
+        center = np.array(config['boundaries'][0]['center'])
+        Rc = (R0+R1)*0.5
+        self.radAve = args.rad
+        self.volAve = np.pi*(self.radAve**2)*np.abs(R1-R0)
+        self.nseg = args.nseg  # split each MT into nseg segments
+        mesh_order = args.mesh
+        # a cylinder with height R1-R0, approximate
+        self.foldername = 'LocalOrder'
+        am.mkdir(self.foldername)
 
-config = am.parseConfig(args.config)
+        points, self.cells = meshzoo.icosa_sphere(mesh_order)
+        er, self.etheta, ep = am.e_sph(points)   # e_theta norm vectors
+        # scale and shift
+        points = points*Rc
+        self.points = points + center[np.newaxis, :]
 
-R0 = config['boundaries'][0]['radius']
-R1 = config['boundaries'][1]['radius']
+        print(', '.join("%s: %s" % item for item in vars(self).items()))
 
-center = np.array(config['boundaries'][0]['center'])
-Rc = (R0+R1)*0.5
-radAve = args.rad
-nseg = args.nseg  # split each MT into nseg segments
-mesh_order = args.mesh
-# a cylinder with height R1-R0, approximate
-volAve = np.pi*radAve*radAve*np.abs(R1-R0)
-foldername = 'LocalOrder'
-am.mkdir(foldername)
-
-print(center, Rc, radAve, nseg, mesh_order, foldername, volAve)
+        return
 
 
-points, cells = meshzoo.icosa_sphere(mesh_order)
-er, etheta, ep = am.e_sph(points)   # e_theta norm vectors
-# scale and shift
-points = points*Rc
-points = points + center[np.newaxis, :]
-
-
-def calcLocalOrder(file, rad, pts, etheta):
+def calcLocalOrder(file, param):
     '''pts: sample points, rad: average radius'''
     # step1: build cKDTree with TList center
     # step2: sample the vicinity of every pts
     # step3: compute average vol, P, S for every point
+    rad = param.radAve
+    volAve = param.volAve
+    nseg = param.nseg
+    foldername = param.foldername
+    pts = param.points
+    cells = param.cells
+    etheta = param.etheta
+
     print(file)
     frame = am.FrameAscii(file, readProtein=True, sort=False, info=False)
 
@@ -105,7 +117,7 @@ def calcLocalOrder(file, rad, pts, etheta):
                 xList[:, 0] != -1, xList[:, 1] != -1))/volAve
 
     name = am.get_basename(frame.filename)
-    meshio.write_points_cells(foldername+"/sphere_{}.vtu".format(name), points,
+    meshio.write_points_cells(foldername+"/sphere_{}.vtu".format(name), pts,
                               cells=[("triangle", cells)],
                               point_data={'volfrac': volfrac,
                                           'nematic': nematic,
@@ -117,7 +129,8 @@ def calcLocalOrder(file, rad, pts, etheta):
 
 
 if __name__ == '__main__':
+    param = Param()
     SylinderFileList = am.getFileListSorted(
         './result*-*/SylinderAscii_*.dat', info=False)
-    for file in SylinderFileList:
-        calcLocalOrder(file, radAve, points, etheta)
+    for file in SylinderFileList[::param.stride]:
+        calcLocalOrder(file, param)
