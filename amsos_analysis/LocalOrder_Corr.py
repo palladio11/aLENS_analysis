@@ -1,17 +1,22 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import os
 from numpy.lib.recfunctions import structured_to_unstructured
 import pyvista as pv
 
 import Util.AMSOS as am
 
+parser = am.getDefaultArgParser('compute correlation')
+parser.add_argument('--nbins', type=int, dest='nbins', default=40,
+                    help='number of hist bins')
+
+args = parser.parse_args()
+
 
 def plot_corr(xdata, ydata, xlabel, ylabel, filename, xlim=None, ylim=None, nbins=20):
     assert xdata.shape == ydata.shape
 
-    hist_norm = mpl.colors.LogNorm()
+    hist_norm = mpl.colors.LogNorm(vmin=1e-4, vmax=1)
     ax = plt.subplot(111)
     h = ax.hist2d(xdata, ydata,
                   density=True, norm=hist_norm, bins=nbins)
@@ -30,6 +35,7 @@ def plot_corr(xdata, ydata, xlabel, ylabel, filename, xlim=None, ylim=None, nbin
 
 
 def calc_corr(file):
+    print(file)
     mesh = pv.read(file)
     print(mesh)
     pgrad = mesh.compute_derivative(scalars="polarity")[
@@ -49,16 +55,20 @@ def calc_corr(file):
                     ])
     pgrad_s = (pt+pp).T
 
-    plot_corr(xdata=mesh['xlinker_n_db'],
+    n_ref = 200000/(4.0*np.pi/3*(5.102**3-5.0**3))
+    plot_corr(xdata=mesh['xlinker_n_db']/n_ref,
               #   ydata=np.linalg.norm(mesh['polarity'], axis=1),
               ydata=np.linalg.norm(pgrad_s, axis=1),
-              xlabel='number density of doubly bound $1/um^3$',
+              xlabel=r'number density of doubly bound $n/n_{\rm ave}$',
               ylabel='grad_s p',
               filename=file,
+              xlim=[0, 4],
+              ylim=[0, 8],
+              nbins=args.nbins
               )
     return
 
 
-files = am.getFileListSorted('./*.vtu')
-for f in files[1500:1505]:
+files = am.getFileListSorted('./*.vtu', info=False)
+for f in files[::50]:
     calc_corr(f)
