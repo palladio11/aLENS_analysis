@@ -37,7 +37,7 @@ def e_sph(xyz):
     et = np.vstack([np.cos(theta)*np.cos(phi), np.cos(theta)
                    * np.sin(phi), -np.sin(theta)])
     ep = np.vstack([-np.sin(phi), np.cos(phi), np.zeros(phi.shape[0])])
-    return er.T, et.T, ep.T
+    return np.ascontiguousarray(er.T), np.ascontiguousarray(et.T), np.ascontiguousarray(ep.T)
 
 
 def volCyl(rad, h):
