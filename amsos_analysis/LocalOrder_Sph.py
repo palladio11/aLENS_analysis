@@ -155,8 +155,8 @@ if __name__ == '__main__':
     fp = client.scatter(param, broadcast=True)
 
     future = client.map(calcLocalOrder,
-                        [file for file in SylinderFileList[3900::param.stride]],
-                        [fp for file in SylinderFileList[3900::param.stride]]
+                        [file for file in SylinderFileList[::param.stride]],
+                        [fp for file in SylinderFileList[::param.stride]]
                         )
     dd.wait(future)
 
