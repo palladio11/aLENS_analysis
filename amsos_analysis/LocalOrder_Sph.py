@@ -26,9 +26,13 @@ class Param:
         parser.add_argument('-s', '--stride', type=int,
                             default=100,
                             help='snapshot stride')
+        parser.add_argument('-N', '--nworkers', type=int,
+                            default=4,
+                            help='number of parallel dask workers')
 
         args = parser.parse_args()
         self.stride = args.stride
+        self.nworkers = args.nworkers
         config = am.parseConfig(args.config)
 
         R0 = config['boundaries'][0]['radius']
@@ -144,7 +148,8 @@ if __name__ == '__main__':
         './result*-*/SylinderAscii_*.dat', info=False)
     # for file in SylinderFileList[::param.stride]:
     #     calcLocalOrder(file, param)
-    client = dd.Client(threads_per_worker=1, n_workers=4, processes=True)
+    client = dd.Client(threads_per_worker=1,
+                       n_workers=param.nworkers, processes=True)
     fp = client.scatter(param, broadcast=True)
 
     future = client.map(calcLocalOrder,
