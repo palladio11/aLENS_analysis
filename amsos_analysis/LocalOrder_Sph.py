@@ -1,9 +1,10 @@
-from dask.distributed import Client
 import numpy as np
 from numpy.lib.recfunctions import structured_to_unstructured
 import scipy.spatial as ss
 import meshzoo
 import meshio
+import dask.distributed as dd
+import codetiming as ct
 
 import Util.AMSOS as am
 
@@ -51,6 +52,7 @@ class Param:
         return
 
 
+@ct.Timer(name='CalcLocalOrder')
 def calcLocalOrder(file, param):
     '''pts: sample points, rad: average radius'''
     # step1: build cKDTree with TList center
@@ -132,5 +134,11 @@ if __name__ == '__main__':
     param = Param()
     SylinderFileList = am.getFileListSorted(
         './result*-*/SylinderAscii_*.dat', info=False)
+    # for file in SylinderFileList[::param.stride]:
+    #     calcLocalOrder(file, param)
+    client = dd.Client(n_workers=4)
+    fp = client.scatter(param, broadcast=True)
+    futures = []
     for file in SylinderFileList[::param.stride]:
-        calcLocalOrder(file, param)
+        futures.append(client.submit(calcLocalOrder, file, fp))
+    dd.wait(futures)
