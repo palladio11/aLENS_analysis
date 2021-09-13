@@ -120,10 +120,9 @@ def getAdjacencyMatrixFromPairs(pairs, N, info=False,
     return nbMat
 
 
-@nb.njit(parallel=True)
 def normalize(vec):
     '''vec must be a numpy array'''
-    return vec/np.sqrt(vec.dot(vec))
+    return vec/np.linalg.norm(vec)
 
 
 def normalize_all(vec):
@@ -170,7 +169,9 @@ def calcNematicS(PList, weight=None):
                 PList[:, i]*PList[:, j], axis=0, weights=weight)
     nematicOrder -= np.identity(3)/3.0
     S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
-    return S
+    w, v = np.linalg.eig(nematicOrder)
+    director = normalize(v[:, np.argmax(np.abs(w))])
+    return S, director
 
 
 @nb.njit(parallel=True)

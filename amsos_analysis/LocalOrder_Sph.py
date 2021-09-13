@@ -15,7 +15,7 @@ class Param:
     def __init__(self):
         parser = am.getDefaultArgParser('calc local stat on a spherical shell')
         parser.add_argument('-r', '--rad', type=float,
-                            default=0.025,
+                            default=0.25,
                             help='average radius')
         parser.add_argument('-n', '--nseg', type=int,
                             default=20,
@@ -99,6 +99,7 @@ def calcLocalOrder(file, param):
     N = pts.shape[0]
     volfrac = np.zeros(N)
     nematic = np.zeros(N)
+    director = np.zeros((N, 3))
     polarity = np.zeros((N, 3))
     polarity_theta = np.zeros(N)
     for i in range(N):
@@ -108,7 +109,7 @@ def calcLocalOrder(file, param):
             volfrac[i] = am.volMT(0.0125, np.sum(seg_len[idx]))/volAve
             polarity[i, :] = am.calcPolarP(vecList)
             polarity_theta[i] = np.dot(polarity[i], etheta[i])
-            nematic[i] = am.calcNematicS(vecList)
+            nematic[i], director[i] = am.calcNematicS(vecList)
 
     PList = frame.PList
     Pm = structured_to_unstructured(PList[['mx', 'my', 'mz']])
@@ -132,6 +133,7 @@ def calcLocalOrder(file, param):
                               cells=[("triangle", cells)],
                               point_data={'volfrac': volfrac,
                                           'nematic': nematic,
+                                          'director': director,
                                           'polarity': polarity,
                                           'polarity_theta': polarity_theta,
                                           'xlinker_n_all': xlinker_n_all,
@@ -153,8 +155,8 @@ if __name__ == '__main__':
     fp = client.scatter(param, broadcast=True)
 
     future = client.map(calcLocalOrder,
-                        [file for file in SylinderFileList[::param.stride]],
-                        [fp for file in SylinderFileList[::param.stride]]
+                        [file for file in SylinderFileList[3900::param.stride]],
+                        [fp for file in SylinderFileList[3900::param.stride]]
                         )
     dd.wait(future)
 
