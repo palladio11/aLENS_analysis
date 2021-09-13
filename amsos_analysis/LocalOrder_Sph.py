@@ -52,12 +52,15 @@ class Param:
         return
 
 
-@ct.Timer(name='CalcLocalOrder')
 def calcLocalOrder(file, param):
     '''pts: sample points, rad: average radius'''
     # step1: build cKDTree with TList center
     # step2: sample the vicinity of every pts
     # step3: compute average vol, P, S for every point
+
+    timer = ct.Timer(name='CalcLocalOrder')
+    timer.start()
+
     rad = param.radAve
     volAve = param.volAve
     nseg = param.nseg
@@ -128,6 +131,9 @@ def calcLocalOrder(file, param):
                                           'xlinker_n_all': xlinker_n_all,
                                           'xlinker_n_db': xlinker_n_db
                                           })
+    timer.stop()
+
+    return
 
 
 if __name__ == '__main__':
@@ -136,9 +142,15 @@ if __name__ == '__main__':
         './result*-*/SylinderAscii_*.dat', info=False)
     # for file in SylinderFileList[::param.stride]:
     #     calcLocalOrder(file, param)
-    client = dd.Client(n_workers=4)
+    client = dd.Client(n_workers=4, processes=True)
     fp = client.scatter(param, broadcast=True)
-    futures = []
-    for file in SylinderFileList[::param.stride]:
-        futures.append(client.submit(calcLocalOrder, file, fp))
-    dd.wait(futures)
+    future = client.map(calcLocalOrder,
+                        [file for file in SylinderFileList[::param.stride]],
+                        [fp for file in SylinderFileList[::param.stride]]
+                        )
+    dd.wait(future)
+
+    # futures = []
+    # for file in SylinderFileList[::param.stride]:
+    #     futures.append(client.submit(calcLocalOrder, file, fp))
+    # dd.wait(futures)
