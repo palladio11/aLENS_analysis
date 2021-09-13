@@ -15,7 +15,7 @@ class Param:
     def __init__(self):
         parser = am.getDefaultArgParser('calc local stat on a spherical shell')
         parser.add_argument('-r', '--rad', type=float,
-                            default=0.25,
+                            default=0.025,
                             help='average radius')
         parser.add_argument('-n', '--nseg', type=int,
                             default=20,
