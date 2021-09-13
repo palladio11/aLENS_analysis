@@ -3,7 +3,9 @@ from numpy.lib.recfunctions import structured_to_unstructured
 import scipy.spatial as ss
 import meshzoo
 import meshio
+import dask
 import dask.distributed as dd
+
 import codetiming as ct
 
 import Util.AMSOS as am
@@ -142,15 +144,17 @@ if __name__ == '__main__':
         './result*-*/SylinderAscii_*.dat', info=False)
     # for file in SylinderFileList[::param.stride]:
     #     calcLocalOrder(file, param)
-    client = dd.Client(n_workers=4, processes=True)
+    client = dd.Client(threads_per_worker=1, n_workers=4, processes=True)
     fp = client.scatter(param, broadcast=True)
+
     future = client.map(calcLocalOrder,
                         [file for file in SylinderFileList[::param.stride]],
                         [fp for file in SylinderFileList[::param.stride]]
                         )
     dd.wait(future)
 
-    # futures = []
+    # lazy_results = []
     # for file in SylinderFileList[::param.stride]:
-    #     futures.append(client.submit(calcLocalOrder, file, fp))
-    # dd.wait(futures)
+    #     lazy_result = dask.delayed(calcLocalOrder)(file, fp)
+    #     lazy_results.append(lazy_result)
+    # dask.compute(*lazy_results)
