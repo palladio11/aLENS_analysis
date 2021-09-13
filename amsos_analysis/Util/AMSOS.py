@@ -11,7 +11,6 @@ import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
 import yaml
-import numba as nb
 
 
 def cart2sph(xyz):
@@ -130,7 +129,6 @@ def normalize_all(vec):
     return vec/np.linalg.norm(vec, axis=1)[:, np.newaxis]
 
 
-@nb.njit
 def findMove(x0, x1, L):
     '''x0,x1,L must be scalar FP numbers'''
     dx = np.abs(x1-x0)
@@ -143,19 +141,19 @@ def findMove(x0, x1, L):
         return x1-x0
 
 
-def orientOrder(orientList, count=False):
-    '''orientList is a list of 3D vecs'''
-    # calc orientation
-    # mean
-    if count:
-        print('Entries in list: ', len(orientList))
-    PList = np.array(orientList)
-    QList = np.array([np.outer(p, p) for p in PList])
-    polarOrder = np.mean(PList, axis=0)
-    nematicOrder = np.mean(QList, axis=0) - np.identity(3)/3
-    # This is the correct S
-    S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
-    return np.array([polarOrder[0], S])
+# def orientOrder(orientList, count=False):
+#     '''orientList is a list of 3D vecs'''
+#     # calc orientation
+#     # mean
+#     if count:
+#         print('Entries in list: ', len(orientList))
+#     PList = np.array(orientList)
+#     QList = np.array([np.outer(p, p) for p in PList])
+#     polarOrder = np.mean(PList, axis=0)
+#     nematicOrder = np.mean(QList, axis=0) - np.identity(3)/3
+#     # This is the correct S
+#     S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
+#     return np.array([polarOrder[0], S])
 
 
 def calcNematicS(PList, weight=None):
@@ -174,33 +172,6 @@ def calcNematicS(PList, weight=None):
     return S, director
 
 
-@nb.njit(parallel=True)
-def calcNematicS_numba(PList):
-    '''PList must be a numpy array with shape (N,3), each row normalized'''
-    # calc orientation
-    # mean
-    # print('Entries in list: ', len(PList))
-    assert PList.shape[1] == 3
-    N = PList.shape[0]
-    QList = np.zeros(shape=(N, 3, 3))
-    nematicOrder = np.zeros((3, 3))
-    for i in range(N):
-        p = PList[i]
-        QList[i] = np.outer(p, p)
-        nematicOrder += QList[i]
-
-    nematicOrder *= (1.0/float(N))
-    nematicOrder -= np.identity(3)/3
-    # This is the correct S
-    prod = 0
-    for i in range(3):
-        for j in range(3):
-            prod += nematicOrder[i, j]*nematicOrder[i, j]
-    # S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
-    S = np.sqrt(prod*1.5)
-    return S
-
-
 def calcPolarP(PList, weight=None):
     '''PList must be a numpy array with shape (N,3), each row normalized'''
     assert PList.shape[1] == 3
@@ -208,35 +179,14 @@ def calcPolarP(PList, weight=None):
     return polarOrder
 
 
-@nb.njit(parallel=True)
-def calcPolarP_numba(PList):
-    assert PList.shape[1] == 3
-    '''PList must be a numpy array with shape (N,3), each row normalized'''
-    # calc orientation
-    # mean
-    # print('Entries in list: ', len(PList))
-    N = PList.shape[0]
-    polarOrder = np.zeros(3)
-    for i in range(N):
-        p = PList[i]
-        polarOrder = polarOrder + p
-
-    polarOrder *= (1.0/float(N))
-    return polarOrder
-
-
-@nb.njit
 def calcCenterOrient(TList):
     '''TList must be a numpy array with shape (N,8), gid, radius, end0, end1'''
+    assert TList.shape[1] == 8
     minus_ends = TList[:, 2:5]
     plus_ends = TList[:, 5:8]
     centers = 0.5*(minus_ends+plus_ends)
-    orients = plus_ends-minus_ends
+    orients = normalize_all(plus_ends-minus_ends)
     N = orients.shape[0]
-
-    for i in nb.prange(N):
-        p = orients[i]
-        orients[i] = normalize(p)
     return centers, orients
 
 
