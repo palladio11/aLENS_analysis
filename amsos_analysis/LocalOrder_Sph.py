@@ -23,14 +23,22 @@ class Param:
         parser.add_argument('-m', '--mesh', type=int,
                             default=50,
                             help='order of icosa mesh')
-        parser.add_argument('-s', '--stride', type=int,
+        parser.add_argument('--stride', type=int,
                             default=100,
                             help='snapshot stride')
-        parser.add_argument('-N', '--nworkers', type=int,
+        parser.add_argument('--start', type=int,
+                            default=0,
+                            help='snapshot start')
+        parser.add_argument('--end', type=int,
+                            default=-1,
+                            help='snapshot end')
+        parser.add_argument('--nworkers', type=int,
                             default=4,
                             help='number of parallel dask workers')
 
         args = parser.parse_args()
+        self.start = args.start
+        self.end = args.end
         self.stride = args.stride
         self.nworkers = args.nworkers
         config = am.parseConfig(args.config)
@@ -48,7 +56,8 @@ class Param:
         am.mkdir(self.foldername)
 
         points, self.cells = meshzoo.icosa_sphere(mesh_order)
-        er, self.etheta, ep = am.e_sph(points)   # e_theta norm vectors
+        self.er, self.etheta, self.ephi = am.e_sph(
+            points)   # e_theta norm vectors
         # scale and shift
         points = points*Rc
         self.points = points + center[np.newaxis, :]
@@ -98,18 +107,15 @@ def calcLocalOrder(file, param):
     search = tree.query_ball_point(pts, rad, workers=-1, return_sorted=False)
     N = pts.shape[0]
     volfrac = np.zeros(N)
-    nematic = np.zeros(N)
-    director = np.zeros((N, 3))
+    nematic = np.zeros((N, 3))
     polarity = np.zeros((N, 3))
-    polarity_theta = np.zeros(N)
     for i in range(N):
         idx = search[i]
         if len(idx) != 0:
             vecList = seg_vec[idx]
             volfrac[i] = am.volMT(0.0125, np.sum(seg_len[idx]))/volAve
             polarity[i, :] = am.calcPolarP(vecList)
-            polarity_theta[i] = np.dot(polarity[i], etheta[i])
-            nematic[i], director[i] = am.calcNematicS(vecList)
+            nematic[i] = am.calcNematicS(vecList)
 
     PList = frame.PList
     Pm = structured_to_unstructured(PList[['mx', 'my', 'mz']])
@@ -131,11 +137,12 @@ def calcLocalOrder(file, param):
     name = am.get_basename(frame.filename)
     meshio.write_points_cells(foldername+"/sphere_{}.vtu".format(name), pts,
                               cells=[("triangle", cells)],
-                              point_data={'volfrac': volfrac,
+                              point_data={'er': param.er,
+                                          'etheta': param.etheta,
+                                          'ephi': param.ephi,
+                                          'volfrac': volfrac,
                                           'nematic': nematic,
-                                          'director': director,
                                           'polarity': polarity,
-                                          'polarity_theta': polarity_theta,
                                           'xlinker_n_all': xlinker_n_all,
                                           'xlinker_n_db': xlinker_n_db
                                           })
@@ -154,9 +161,10 @@ if __name__ == '__main__':
                        n_workers=param.nworkers, processes=True)
     fp = client.scatter(param, broadcast=True)
 
+    files = SylinderFileList[param.start:param.end:param.stride]
     future = client.map(calcLocalOrder,
-                        [file for file in SylinderFileList[::param.stride]],
-                        [fp for file in SylinderFileList[::param.stride]]
+                        [file for file in files],
+                        [fp for file in files]
                         )
     dd.wait(future)
 

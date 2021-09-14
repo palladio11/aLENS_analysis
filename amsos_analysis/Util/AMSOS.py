@@ -169,7 +169,7 @@ def calcNematicS(PList, weight=None):
     S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
     w, v = np.linalg.eig(nematicOrder)
     director = normalize(v[:, np.argmax(np.abs(w))])
-    return S, director
+    return S*director
 
 
 def calcPolarP(PList, weight=None):
