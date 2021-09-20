@@ -39,6 +39,39 @@ def e_sph(xyz):
     return np.ascontiguousarray(er.T), np.ascontiguousarray(et.T), np.ascontiguousarray(ep.T)
 
 
+class ParamBase:
+    def __init__(self, text):
+        parser = getDefaultArgParser(text)
+        parser.add_argument('--stride', type=int,
+                            default=100,
+                            help='snapshot stride')
+        parser.add_argument('--start', type=int,
+                            default=0,
+                            help='snapshot start')
+        parser.add_argument('--end', type=int,
+                            default=-1,
+                            help='snapshot end')
+        parser.add_argument('--nworkers', type=int,
+                            default=4,
+                            help='number of parallel workers')
+
+        self.args = parser.parse_args()
+        self.start = self.args.start
+        self.end = self.args.end
+        self.stride = self.args.stride
+        self.nworkers = self.args.nworkers
+        self.data_root = self.args.data
+
+        self.config = parseConfig(self.args.config)
+        self.protein = parseConfig(self.args.pconfig)
+        self.syfiles=getFileListSorted(self.data_root+"/result*-*/SylinderAscii_*.dat",False)[self.start:self.end:self.stride]
+        self.ptfiles=getFileListSorted(self.data_root+"/result*-*/ProteinAscii_*.dat",False)[self.start:self.end:self.stride]
+
+        print(', \n'.join("%s: %s" % item for item in vars(self).items()))
+
+        return
+
+
 def volCyl(rad, h):
     '''cylinder volume'''
     return np.pi*(rad**2)*h
@@ -84,6 +117,9 @@ def getDefaultArgParser(info):
     parser.add_argument('-p', '--protein', type=str,
                         default='../ProteinConfig.yaml',
                         help='path to protein yaml file')
+    parser.add_argument('-d', '--data', type=str,
+                        default='./',
+                        help='path to result*-* folders')
     # examples
     # parser.add_argument('ngrid', type=int,
     #                     help='number of samples along X axis')
@@ -139,21 +175,6 @@ def findMove(x0, x1, L):
             return x1+L-x0
     else:
         return x1-x0
-
-
-# def orientOrder(orientList, count=False):
-#     '''orientList is a list of 3D vecs'''
-#     # calc orientation
-#     # mean
-#     if count:
-#         print('Entries in list: ', len(orientList))
-#     PList = np.array(orientList)
-#     QList = np.array([np.outer(p, p) for p in PList])
-#     polarOrder = np.mean(PList, axis=0)
-#     nematicOrder = np.mean(QList, axis=0) - np.identity(3)/3
-#     # This is the correct S
-#     S = np.sqrt(np.tensordot(nematicOrder, nematicOrder)*1.5)
-#     return np.array([polarOrder[0], S])
 
 
 def calcNematicS(PList, weight=None):
