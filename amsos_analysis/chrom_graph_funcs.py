@@ -218,6 +218,40 @@ def make_segment_distr_graphs(
     return fig, axarr
 
 
+def make_summed_contact_kymo_graph(
+        contact_mat, time_arr, contact_type="", vmax=10):
+    fig, axarr = plt.subplots(1, 2, figsize=(16, 6))
+
+    nbeads = contact_mat.shape[0]
+    x = np.arange(nbeads + 1)[::int((nbeads) / contact_mat.shape[0])]
+    X, Y = np.meshgrid(x, x)
+    c0 = axarr[0].pcolorfast(X, Y, np.log(contact_mat[:, :, -1]), vmin=-50)
+    axarr[0].set_aspect('equal')
+    _ = fig.colorbar(c0, ax=axarr[0], label="Log contact probability")
+    _ = axarr[0].set_xlabel(r'Bead index')
+    _ = axarr[0].set_ylabel(r'Bead index')
+
+    contact_kymo = np.sum(contact_mat, axis=0) - 1
+    y = np.arange(contact_kymo.shape[0] + 1)
+    # Add extra time point
+    x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
+    X, Y = np.meshgrid(x, y)
+    if contact_type == "log":
+        c1 = axarr[1].pcolorfast(X, Y, np.log(contact_kymo))
+        _ = fig.colorbar(
+            c1,
+            ax=axarr[1],
+            label="Log sum contact \n probability")
+    else:
+        c1 = axarr[1].pcolorfast(X, Y, contact_kymo, vmax=vmax)
+        _ = fig.colorbar(c1, ax=axarr[1], label="Sum contact probability")
+    axarr[1].set_xlabel("Time $t$ (sec)")
+    axarr[1].set_ylabel("Bead index")
+    fig.tight_layout()
+
+    return fig, axarr, contact_kymo
+
+
 def make_rog_vs_time_graph(time_arr, com_arr, label=None):
     fig, ax = plt.subplots(figsize=(8, 6))
     rog_arr = calc_rad_of_gyration(com_arr)

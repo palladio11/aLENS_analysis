@@ -36,7 +36,8 @@ from .chrom_graph_funcs import (graph_link_energy_vs_time,
                                 make_segment_distr_graphs,
                                 make_rog_vs_time_graph,
                                 plot_rog_vs_time_graph,
-                                make_hic_plot
+                                make_hic_plot,
+                                make_summed_contact_kymo_graph
                                 )
 
 from .physical_scales import (get_drag_coeff,

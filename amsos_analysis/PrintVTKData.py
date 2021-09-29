@@ -28,7 +28,8 @@ class ConBlock(object):
 class Frame:
 
     def __init__(self, sylinderFile=None, proteinFile=None,
-                 conBlockFile=None):
+                 conBlockFile=None, print_flag=True):
+        self.print_flag = print_flag
         self.sylinders = []
         self.proteins = []
         self.conBlocks = []
@@ -48,7 +49,7 @@ class Frame:
         # fill data
         # step 1, end coordinates
         nObj = int(data.GetPoints().GetNumberOfPoints() / 2)
-        print("parsing data for ", nObj, " sylinders")
+        print("parsing data for ", nObj, " object(s)")
         for i in range(nObj):
             s = objType()
             s.end0 = data.GetPoints().GetPoint(2 * i)
@@ -61,7 +62,7 @@ class Frame:
         for i in range(numCellData):
             cdata = data.GetCellData().GetArray(i)
             dataName = cdata.GetName()
-            print("Parsing Cell Data", dataName)
+            # print("Parsing Cell Data", dataName)
             for j in range(len(objList)):
                 setattr(objList[j], dataName, cdata.GetTuple(j))
 
@@ -71,18 +72,19 @@ class Frame:
         for i in range(numPointData):
             pdata = data.GetPointData().GetArray(i)
             dataName = pdata.GetName()
-            print("Parsing Point Data", dataName)
+            # print("Parsing Point Data", dataName)
             for j in range(len(objList)):
                 setattr(objList[j], dataName + "0", pdata.GetTuple(2 * j))
                 setattr(objList[j], dataName + "1", pdata.GetTuple(2 * j + 1))
 
         # output all data for debug
-        for s in objList[:10]:
-            # print(s.end0, s.end1)
-            attrs = vars(s)
-            print('*************************************')
-            print('\n'.join("%s: %s" % item for item in attrs.items()))
-            print('*************************************')
+        if self.print_flag:
+            for s in objList[:10]:
+                # print(s.end0, s.end1)
+                attrs = vars(s)
+                print('*************************************')
+                print('\n'.join("%s: %s" % item for item in attrs.items()))
+                print('*************************************')
 
         print("-------------------------------------")
 
@@ -94,7 +96,6 @@ class Frame:
 
     def parseConBlockFile(self, conBlockFile):
         self.parseFile(conBlockFile, ConBlock, self.conBlocks)
-
 
 
 def getFrameNumber_lambda(filename): return int(

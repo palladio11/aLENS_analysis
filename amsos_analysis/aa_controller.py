@@ -59,7 +59,7 @@ def parse_args():
 
     opts.params = {
         'n_graph': 5,
-        'fps': 12,
+        'fps': 15,
         'style': "log_contact",
         'downsample': 1,
         'vmin': -20,
