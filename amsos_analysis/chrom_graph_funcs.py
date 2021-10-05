@@ -219,13 +219,13 @@ def make_segment_distr_graphs(
 
 
 def make_summed_contact_kymo_graph(
-        contact_mat, time_arr, contact_type="", vmax=10):
+        contact_mat, time_arr, contact_type="", vmin=-30, vmax=10):
     fig, axarr = plt.subplots(1, 2, figsize=(16, 6))
 
     nbeads = contact_mat.shape[0]
     x = np.arange(nbeads + 1)[::int((nbeads) / contact_mat.shape[0])]
     X, Y = np.meshgrid(x, x)
-    c0 = axarr[0].pcolorfast(X, Y, np.log(contact_mat[:, :, -1]), vmin=-50)
+    c0 = axarr[0].pcolorfast(X, Y, np.log(contact_mat[:, :, -1]), vmin=vmin)
     axarr[0].set_aspect('equal')
     _ = fig.colorbar(c0, ax=axarr[0], label="Log contact probability")
     _ = axarr[0].set_xlabel(r'Bead index')

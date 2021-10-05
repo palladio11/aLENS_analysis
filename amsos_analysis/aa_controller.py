@@ -14,9 +14,12 @@ import h5py
 import yaml
 import time
 
+import matplotlib.pyplot as plt
+
 from .read_func import convert_dat_to_hdf
 from .hic_animation import hic_animation
 from .min_animation import min_animation
+from .colormaps import register_cmaps
 
 
 def parse_args():
@@ -55,10 +58,17 @@ def parse_args():
     parser.add_argument("-G", "--graph", action="store_true", default=False,
                         help=("Create graph of a seed's end state."))
 
+    parser.add_argument("-cm", "--colormap", default=None,
+                        help=("Specify a colormap to use in graphs"))
+
     opts = parser.parse_args()
 
+    if opts.colormap:
+        register_cmaps()
+        plt.rcParams['image.cmap'] = opts.colormap
+
     opts.params = {
-        'n_graph': 5,
+        'n_graph': 10,
         'fps': 15,
         'style': "log_contact",
         'downsample': 1,

@@ -47,3 +47,5 @@ from .physical_scales import (get_drag_coeff,
                               get_link_relax_time,
                               get_pfract
                               )
+
+from .colormaps import register_cmaps
