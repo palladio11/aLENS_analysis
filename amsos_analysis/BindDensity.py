@@ -1,99 +1,137 @@
+from numpy.lib.recfunctions import structured_to_unstructured
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import scipy.special as ss
-import os
-
+import json as js
+from Util.AMSOS import ParamBase, check_inline, normalize, point_line_proj
 import Util.AMSOS as am
-import Util.HDF5_Wrapper as h5
+import dask.distributed as dd
+import matplotlib
+matplotlib.use('Agg')
 
 
-parser = am.getDefaultArgParser('Calculate G(r) and S(q)')
-parser.add_argument('--pconfig', type=str, dest='pconfig',
-                    default='../ProteinConfig.yaml', help='ProteinConfig.yaml file location')
-parser.add_argument('--plot_each', type=bool, dest='plot_each',
-                    default=False, help='plot hist for each frame')
-
-
-args = parser.parse_args()
-
-config = am.parseConfig(args.config)
-pconfig = am.parseConfig(args.pconfig)
-
-foldername = 'BindDensity'
-
-h5FileName = 'BindDensity'
-h5.newFile(h5FileName)
-
-
-def point_line_proj(point, p0, p1):
-    '''find projection of point on p0-p1'''
-    u = point-p0
-    v = p1-p0
-    v_norm = np.sqrt(v.dot(v))
-    proj_of_u_on_v = (np.dot(u, v)/v_norm**2)*v
-    proj = p0+proj_of_u_on_v  # projection of point to p line
-    dist = np.sqrt(proj.dot(proj))
-    return proj, dist
-
-
-def process_frame(frame):
-    path = am.get_basename(frame.filename)
-
-    minus_pts = frame.TList[:, 2:5]
-    plus_pts = frame.TList[:, 5:8]
-
-    xlinkers = frame.PList
-    loc = []
-    for xl in xlinkers:
-        idBind = xl[-2:]
-        if int(idBind[0]) == -1 or int(idBind[1]) == -1:
-            continue
-        assert int(idBind[0]) == 0 and int(idBind[1]) == 1
-        xl0 = xl[2:5]  # position end0
-        xl1 = xl[5:8]  # position end1
-        proj, dist = point_line_proj(xl0, minus_pts[1], plus_pts[1])
-        normT1 = plus_pts[1]-minus_pts[1]
-        normT1 = normT1/np.linalg.norm(normT1)
-        loc.append((xl1-proj).dot(normT1))
-    loc = np.array(loc)
-    h5.saveData(h5FileName, loc, path+'/loc', 'loc', float)
-    # print(loc)
-
-    name = am.get_basename(frame.filename)
-
-    if not args.plot_each:
+class Param(ParamBase):
+    def add_argument(self, parser):
+        parser.add_argument('--plot_each', type=bool, dest='plot_each',
+                            default=False, help='plot hist for each frame')
         return
 
-    fig = plt.figure(figsize=(5, 3))
-    ax = fig.add_subplot(111)
-    ax.hist(loc, bins=50, range=[-0.075, 0.075],
-            density=True)
-    plt.savefig(foldername+'/'+name+'.png', dpi=150)
-    plt.close(fig)
-    plt.clf()
+    def add_param(self):
+        self.eps = 1e-5
+        self.outputFolder = self.data_root+'/BindDensity'
+        am.mkdir(self.outputFolder)
+        if self.plot_each:
+            self.outputPlotFolder = self.data_root+'/BindDensityPlot'
+            am.mkdir(self.outputPlotFolder)
+        return
+
+
+def find_dbl_x(mt0, mt1, p0, p1):
+    '''p0 bound on mt0, p1 bound on mt1'''
+    assert check_inline(mt0[0], mt0[1], p0)
+    assert check_inline(mt1[0], mt1[1], p1)
+
+    foot0on1 = point_line_proj(p0, mt1[0], mt1[1])
+    foot1on0 = point_line_proj(p1, mt0[0], mt0[1])
+    norm_mt0 = normalize(mt0[1]-mt0[0])
+    norm_mt1 = normalize(mt1[1]-mt1[0])
+
+    return (p1-foot0on1).dot(norm_mt1), (p0-foot1on0).dot(norm_mt0)
+
+
+def process_frame(file, param):
+    frame = am.FrameAscii(file, readProtein=True, sort=False, info=False)
+    name = am.get_basename(frame.filename)
+    pbc = param.config['simBoxPBC']
+    box = np.array(param.config['simBoxHigh']) - \
+        np.array(param.config['simBoxLow'])
+
+    TList = frame.TList
+    Tid = structured_to_unstructured(TList[['gid']])
+    Tm = structured_to_unstructured(TList[['mx', 'my', 'mz']])
+    Tp = structured_to_unstructured(TList[['px', 'py', 'pz']])
+    NT = len(TList)
+    assert NT == Tm.shape[0] and NT == Tp.shape[0]
+    gid_to_index = dict()
+    for i, v in enumerate(Tid[:, 0]):
+        if v in gid_to_index:
+            print('duplicate gid detected in T list')
+            exit()
+        gid_to_index[v] = i
+
+    PList = frame.PList
+    Pa = structured_to_unstructured(PList[['mx', 'my', 'mz']])
+    Pb = structured_to_unstructured(PList[['px', 'py', 'pz']])
+    Pbind = structured_to_unstructured(PList[['idbind0', 'idbind1']])
+
+    NP = len(PList)
+    assert NP == Pa.shape[0] and NP == Pb.shape[0] and NP == Pbind.shape[0]
+
+    uCount = 0
+    saCount = 0
+    sbCount = 0
+    dCount = 0
+    x01 = []  # distance of 1 from projection of head 0 on mt
+    x10 = []  # distance of 0 from projection of head 1 on mt
+    for i in range(NP):
+        if Pbind[i][0] == -1 and Pbind[i][1] == -1:
+            uCount += 1
+        elif Pbind[i][0] != -1 and Pbind[i][1] == -1:
+            saCount += 1
+        elif Pbind[i][1] != -1 and Pbind[i][0] == -1:
+            sbCount += 1
+        else:
+            dCount += 1
+            # compute conformation
+            mt0idx = gid_to_index[Pbind[i][0]]
+            mt1idx = gid_to_index[Pbind[i][1]]
+            mt0 = (Tm[mt0idx], Tp[mt0idx])
+            mt1 = (Tm[mt1idx], Tp[mt1idx])
+            Pcenter = 0.5*(Pa[i]+Pb[i])
+            mt0 = am.find_closest_mt(mt0, Pcenter, pbc, box)
+            mt1 = am.find_closest_mt(mt1, Pcenter, pbc, box)
+            xab = find_dbl_x(mt0, mt1, Pa[i], Pb[i])
+            x01.append(xab[0])
+            x10.append(xab[1])
+
+    tosave = {'uCount': uCount,
+              'saCount': saCount,
+              'sbCount': sbCount,
+              'dCount': dCount,
+              'head1_to_foot_of0': x01
+              #   'head0_to_foot_of1': x10,
+              }
+    with open(param.outputFolder+'/'+name+'.json', 'w') as f:
+        js.dump(tosave, f, ensure_ascii=True, indent=2)
+
+    if param.plot_each:
+        fig = plt.figure(figsize=(5, 3))
+        ax = fig.add_subplot(111)
+        xlim = 0.2
+        if len(x01) > 0:
+            ax.hist(x01, bins=100, range=[-xlim, xlim],
+                    density=True, alpha=0.5)
+        # if len(x10) > 0:
+        #     ax.hist(x10, bins=100, range=[-xlim, xlim],
+        #             density=True, alpha=0.5)
+        plt.savefig(param.outputPlotFolder+'/'+name+'.png', dpi=150)
+        plt.close(fig)
+        plt.cla()
+        plt.clf()
 
     return
 
 
-class FrameAscii:
-    '''Load Ascii.dat data'''
+if __name__ == '__main__':
+    param = Param('calculate motor binding density')
+    files = param.syfiles
 
-    def __init__(self, filename):
-        self.filename = filename
-        self.TList = am.parseSylinderAscii(filename, False, True)
-        filename = filename.replace('Sylinder', 'Protein')
-        self.PList = np.loadtxt(filename, skiprows=2,
-                                usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), dtype=np.float64)
+    # distribute jobs by dask
+    client = dd.Client(threads_per_worker=1,
+                       n_workers=param.nworkers, processes=True)
+    fp = client.scatter(param, broadcast=True)
 
-
-try:
-    os.mkdir(foldername)
-except FileExistsError:
-    pass
-
-files = am.getFileListSorted('result*-*/SylinderAscii_*.dat')
-
-for f in files:
-    frame = FrameAscii(f)
-    process_frame(frame)
+    future = client.map(process_frame,
+                        [file for file in files],
+                        [fp for _ in files]
+                        )
+    dd.wait(future)

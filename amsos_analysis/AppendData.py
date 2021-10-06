@@ -1,7 +1,7 @@
 import Util.AMSOS as am
 import h5py as h5
-from PyEVTK.evtk.hl import polyLinesToVTK
 import numpy as np
+import pyvista as pv
 
 # open data
 foldername = 'Sylinder_SND'

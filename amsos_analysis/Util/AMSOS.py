@@ -39,9 +39,52 @@ def e_sph(xyz):
     return np.ascontiguousarray(er.T), np.ascontiguousarray(et.T), np.ascontiguousarray(ep.T)
 
 
+def point_line_proj(point, p0, p1):
+    '''find projection of point on p0-p1'''
+    u = point-p0
+    v = p1-p0
+    v_norm = np.sqrt(v.dot(v))
+    proj_of_u_on_v = (np.dot(u, v)/v_norm**2)*v
+    proj = p0+proj_of_u_on_v  # projection of point to p line
+    return proj
+
+
+def find_closest_mt(mt, point, pbc, box):
+    ''''''
+    assert len(pbc) == 3
+    assert len(box) == 3
+    proj = point_line_proj(point, mt[0], mt[1])
+    shift = np.zeros(3)
+    for k in range(3):
+        if not pbc[k]:  # ignore non-periodic direction
+            continue
+        candidates = [(proj[k]-box[k], -1), (proj[k], 0), (proj[k]+box[k], 1)]
+        candidates.sort(key=lambda x: np.linalg.norm(x[0]-point[k]))
+        shift[k] = candidates[0][1]
+
+    return (mt[0]+shift, mt[1]+shift)
+
+
+def check_inline(p0, p1, p2, eps=1e-7):
+    proj = point_line_proj(p2, p0, p1)
+    if np.linalg.norm(p2-proj) < eps:
+        return True
+    else:
+        return False
+
+
 class ParamBase:
     def __init__(self, text):
-        parser = getDefaultArgParser(text)
+        parser = agp.ArgumentParser(description=text)
+        parser.add_argument('--config', type=str,
+                            default='../RunConfig.yaml',
+                            help='path to config yaml file')
+        parser.add_argument('--pconfig', type=str,
+                            default='../ProteinConfig.yaml',
+                            help='path to protein yaml file')
+        parser.add_argument('--data_root', type=str,
+                            default='./',
+                            help='path to result*-* folders')
         parser.add_argument('--stride', type=int,
                             default=100,
                             help='snapshot stride')
@@ -55,20 +98,32 @@ class ParamBase:
                             default=4,
                             help='number of parallel workers')
 
-        self.args = parser.parse_args()
-        self.start = self.args.start
-        self.end = self.args.end
-        self.stride = self.args.stride
-        self.nworkers = self.args.nworkers
-        self.data_root = self.args.data
+        self.add_argument(parser)
 
-        self.config = parseConfig(self.args.config)
-        self.protein = parseConfig(self.args.pconfig)
-        self.syfiles=getFileListSorted(self.data_root+"/result*-*/SylinderAscii_*.dat",False)[self.start:self.end:self.stride]
-        self.ptfiles=getFileListSorted(self.data_root+"/result*-*/ProteinAscii_*.dat",False)[self.start:self.end:self.stride]
+        args = parser.parse_args()
+        for k, v in vars(args).items():
+            setattr(self, k, v)
+
+        self.config = parseConfig(args.config, False)
+        self.protein = parseConfig(args.pconfig, False)
+        self.add_param()
 
         print(', \n'.join("%s: %s" % item for item in vars(self).items()))
 
+        self.syfiles = getFileListSorted(
+            self.data_root+"/result*-*/SylinderAscii_*.dat", False)[self.start:self.end:self.stride]
+        self.ptfiles = getFileListSorted(
+            self.data_root+"/result*-*/ProteinAscii_*.dat", False)[self.start:self.end:self.stride]
+
+        print("SylinderFiles", self.syfiles[:10])
+        print("ProteinFiles", self.ptfiles[:10])
+
+        return
+
+    def add_argument(self, parser):
+        return
+
+    def add_param(self):
         return
 
 
@@ -108,31 +163,11 @@ def getFileListSorted(files, info=True):
     return files
 
 
-def getDefaultArgParser(info):
-    '''default argparser'''
-    parser = agp.ArgumentParser(description=info)
-    parser.add_argument('-c', '--config', type=str,
-                        default='../RunConfig.yaml',
-                        help='path to config yaml file')
-    parser.add_argument('-p', '--protein', type=str,
-                        default='../ProteinConfig.yaml',
-                        help='path to protein yaml file')
-    parser.add_argument('-d', '--data', type=str,
-                        default='./',
-                        help='path to result*-* folders')
-    # examples
-    # parser.add_argument('ngrid', type=int,
-    #                     help='number of samples along X axis')
-    # parser.add_argument('--rcut', type=float,
-    #                     help='cut-off radius of g(r), default 0.1um',
-    #  default=0.1)
-    return parser
-
-
-def parseConfig(yamlFile):
+def parseConfig(yamlFile, info=True):
     file = open(yamlFile, 'r')
     config = yaml.load(file, Loader=yaml.FullLoader)
-    print('Config: ', config)
+    if info:
+        print('Config: ', config)
     file.close()
     return config
 
