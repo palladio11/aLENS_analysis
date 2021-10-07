@@ -41,6 +41,7 @@ def find_dbl_x(mt0, mt1, p0, p1):
 def process_frame(file, param):
     frame = am.FrameAscii(file, readProtein=True, sort=False, info=False)
     name = am.get_basename(frame.filename)
+    number = am.getFrameNumber_lambda(frame.filename)
     pbc = param.config['simBoxPBC']
     box = np.array(param.config['simBoxHigh']) - \
         np.array(param.config['simBoxLow'])
@@ -113,7 +114,8 @@ def process_frame(file, param):
         # if len(x10) > 0:
         #     ax.hist(x10, bins=100, range=[-xlim, xlim],
         #             density=True, alpha=0.5)
-        plt.savefig(param.outputPlotFolder+'/'+name+'.png', dpi=150)
+        plt.savefig(param.outputPlotFolder +
+                    '/density_{:08d}'.format(number)+'.png', dpi=150)
         plt.close(fig)
         plt.cla()
         plt.clf()
