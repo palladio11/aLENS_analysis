@@ -72,7 +72,6 @@ def process_frame(file, param):
     sbCount = 0
     dCount = 0
     x01 = []  # distance of 1 from projection of head 0 on mt
-    x10 = []  # distance of 0 from projection of head 1 on mt
     for i in range(NP):
         if Pbind[i][0] == -1 and Pbind[i][1] == -1:
             uCount += 1
@@ -91,14 +90,13 @@ def process_frame(file, param):
             mt0 = am.find_closest_mt(mt0, Pcenter, pbc, box)
             mt1 = am.find_closest_mt(mt1, Pcenter, pbc, box)
             xab = find_dbl_x(mt0, mt1, Pa[i], Pb[i])
-            x01.append(xab[0])
-            x10.append(xab[1])
+            x01.append(xab[0]/0.025)
 
     tosave = {'uCount': uCount,
               'saCount': saCount,
               'sbCount': sbCount,
               'dCount': dCount,
-              'head1_to_foot_of0': x01
+              'head1_to_foot_of0_dimensionless': x01
               #   'head0_to_foot_of1': x10,
               }
     with open(param.outputFolder+'/'+name+'.json', 'w') as f:
@@ -107,15 +105,12 @@ def process_frame(file, param):
     if param.plot_each:
         fig = plt.figure(figsize=(5, 3))
         ax = fig.add_subplot(111)
-        xlim = 0.2
+        xlim = 10  # dimensionless
         if len(x01) > 0:
             ax.hist(x01, bins=100, range=[-xlim, xlim],
                     density=True, alpha=0.5)
-        # if len(x10) > 0:
-        #     ax.hist(x10, bins=100, range=[-xlim, xlim],
-        #             density=True, alpha=0.5)
         plt.savefig(param.outputPlotFolder +
-                    '/density_{:08d}'.format(number)+'.jpg', dpi=150)
+                    '/density_{:08d}'.format(number)+'.png', dpi=150)
         plt.close(fig)
         plt.cla()
         plt.clf()

@@ -65,7 +65,7 @@ def find_closest_mt(mt, point, pbc, box):
     return (mt[0]+shift, mt[1]+shift)
 
 
-def check_inline(p0, p1, p2, eps=1e-7):
+def check_inline(p0, p1, p2, eps=1e-5):
     proj = point_line_proj(p2, p0, p1)
     if np.linalg.norm(p2-proj) < eps:
         return True
@@ -83,7 +83,7 @@ class ParamBase:
                             default='../ProteinConfig.yaml',
                             help='path to protein yaml file')
         parser.add_argument('--data_root', type=str,
-                            default='./',
+                            default='.',
                             help='path to result*-* folders')
         parser.add_argument('--stride', type=int,
                             default=100,

@@ -8,19 +8,12 @@ from numpy.lib.recfunctions import structured_to_unstructured
 import Util.AMSOS as am
 import Util.HDF5_Wrapper as h5
 
-parser = am.getDefaultArgParser(
-    'Calculate net displacement along certain direction')
-parser.add_argument('--start', type=int, dest='start', default=0,
-                    help='start frame number of traj')
-parser.add_argument('--end', type=int, dest='end', default=-1,
-                    help='end frame number of traj')
+param = am.ParamBase('Calculate net displacement along certain direction')
 
-args = parser.parse_args()
-
-config = am.parseConfig(args.config)
+config = param.config
 boxsize = np.array(config['simBoxHigh'])-np.array(config['simBoxLow'])
 pbc = np.array(config['simBoxPBC'])
-deltat = config['timeSnap']  # time between two snapshots
+deltat = config['timeSnap']*param.stride  # time between two snapshots
 
 
 h5name = 'Trajectory'
@@ -66,5 +59,5 @@ def genTrajectory(files, start=0, end=-1):
     return
 
 
-SylinderFileList = am.getFileListSorted('result*-*/SylinderAscii_*.dat')
-genTrajectory(SylinderFileList, args.start, args.end)
+SylinderFileList = param.syfiles
+genTrajectory(SylinderFileList)
