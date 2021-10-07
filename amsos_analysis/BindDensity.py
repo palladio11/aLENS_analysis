@@ -115,7 +115,7 @@ def process_frame(file, param):
         #     ax.hist(x10, bins=100, range=[-xlim, xlim],
         #             density=True, alpha=0.5)
         plt.savefig(param.outputPlotFolder +
-                    '/density_{:08d}'.format(number)+'.png', dpi=150)
+                    '/density_{:08d}'.format(number)+'.jpg', dpi=150)
         plt.close(fig)
         plt.cla()
         plt.clf()
