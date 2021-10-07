@@ -50,14 +50,15 @@ def process_frame(file, param):
     Tid = structured_to_unstructured(TList[['gid']])
     Tm = structured_to_unstructured(TList[['mx', 'my', 'mz']])
     Tp = structured_to_unstructured(TList[['px', 'py', 'pz']])
-    NT = len(TList)
-    assert NT == Tm.shape[0] and NT == Tp.shape[0]
-    gid_to_index = dict()
-    for i, v in enumerate(Tid[:, 0]):
-        if v in gid_to_index:
-            print('duplicate gid detected in T list')
-            exit()
-        gid_to_index[v] = i
+    NT = len(Tid)
+    if NT >= 2:
+        assert NT == Tm.shape[0] and NT == Tp.shape[0]
+        gid_to_index = dict()
+        for i, v in enumerate(Tid[:, 0]):
+            if v in gid_to_index:
+                print('duplicate gid detected in T list')
+                exit()
+            gid_to_index[v] = i
 
     PList = frame.PList
     Pa = structured_to_unstructured(PList[['mx', 'my', 'mz']])
@@ -121,6 +122,8 @@ def process_frame(file, param):
 if __name__ == '__main__':
     param = Param('calculate motor binding density')
     files = param.syfiles
+
+    # process_frame(files[0], param)
 
     # distribute jobs by dask
     client = dd.Client(threads_per_worker=1,
