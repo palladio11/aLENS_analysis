@@ -13,6 +13,8 @@ from pathlib import Path
 import h5py
 import yaml
 import time
+import re
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 
@@ -70,6 +72,8 @@ def parse_args():
     opts.params = {
         'n_graph': 10,
         'fps': 15,
+        # 'n_graph': 1,
+        # 'fps': 2,
         'style': "log_contact",
         'downsample': 1,
         'vmin': -20,
@@ -80,8 +84,34 @@ def parse_args():
     # Post parsing changes to options
     opts.path = Path(opts.path).resolve()
     opts.data_dir = opts.path / 'result'
+    print(opts.path)
 
     return opts
+
+
+def get_walltime(log_path):
+    """Uses the log file to calculate the total time the simulation took.
+    This will not work for restarted simulations. Might want to fix that.
+
+    @param log_path TODO
+    @return: TODO
+
+    """
+    with open(log_path, 'r') as rlf:
+        pattern = re.compile(r'\[(\d+-\d+-\d+\s\d+:\d+:\d+\.\d+)\]')
+        line = rlf.readline()
+        while not pattern.search(line):
+            line = rlf.readline()
+        start_wtime = pattern.search(line).group(0)
+
+        for line in rlf:
+            pass
+
+        end_wtime = pattern.search(line).group(0)
+    stripstr = '[%Y-%m-%d %H:%M:%S.%f]'
+    end_dt = datetime.strptime(end_wtime, stripstr)
+    start_dt = datetime.strptime(start_wtime, stripstr)
+    return end_dt - start_dt
 
 
 def main():
@@ -103,7 +133,12 @@ def main():
             print(f'{opts.path.stem}')
             h5_data = convert_dat_to_hdf(f'{opts.path.stem}.h5', opts.path)
             print(f" HDF5 created in {time.time() - t0}")
-        # run_analysis(opts)
+            # Check to see if run.log is present in current simulation
+            # Wall time analysis
+            if (opts.path / 'run.log').exists():
+                dwtime = get_walltime(opts.path / 'run.log')
+                h5_data.attrs['total_seconds'] = dwtime.total_seconds()
+                h5_data.attrs['walltime'] = str(dwtime)
 
     if opts.movie == "hic":
         hic_animation(opts)
