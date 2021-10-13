@@ -75,7 +75,8 @@ def check_inline(p0, p1, p2, eps=1e-5):
 
 class ParamBase:
     def __init__(self, text):
-        parser = agp.ArgumentParser(description=text)
+        parser = agp.ArgumentParser(
+            description=text, formatter_class=agp.ArgumentDefaultsHelpFormatter)
         parser.add_argument('--config', type=str,
                             default='../RunConfig.yaml',
                             help='path to config yaml file')
