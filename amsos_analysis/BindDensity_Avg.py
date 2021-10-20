@@ -33,6 +33,10 @@ for i in range(nfiles//2, nfiles):
         sb.append(item['sbCount'])
         db.append(item['dCount'])
 
+data = np.array(data)
+np.savetxt(fname='BindDensity_Avg.txt', X=data,
+           header='head1_to_foot_of0_dimensionless')
+
 fig = plt.figure()
 ax = fig.add_subplot(111)
 xlim = 10  # dimensionless

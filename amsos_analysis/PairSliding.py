@@ -64,4 +64,4 @@ plt.plot(t[start_fit:], f_fit(t[start_fit:],
 plt.plot(t, z, label='distance = {:g} um'.format(z_dist))
 
 plt.legend()
-plt.savefig('PairSligin.png', dpi=300)
+plt.savefig('PairSliding.png', dpi=300)
