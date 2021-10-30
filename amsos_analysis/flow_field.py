@@ -35,12 +35,12 @@ def read_params(configyaml):
 
     boxLow = config['simBoxLow']
     boxHigh = config['simBoxHigh']
-    boxX = boxHigh[0]-boxLow[0]  # um
-    boxY = boxHigh[1]-boxLow[1]  # um
-    boxZ = boxHigh[2]-boxLow[2]  # um
-    assert np.abs(boxX-boxY) < 1e-6
-    assert np.abs(boxX-boxZ) < 1e-6
-    box_origin = np.array([0, 0, 0])
+    boxX = boxHigh[0] - boxLow[0]  # um
+    boxY = boxHigh[1] - boxLow[1]  # um
+    boxZ = boxHigh[2] - boxLow[2]  # um
+    assert np.abs(boxX - boxY) < 1e-6
+    assert np.abs(boxX - boxZ) < 1e-6
+    # box_origin = np.array([0, 0, 0])
     # box_origin = np.array([-3, -3, -3])
     box_origin = np.asarray(boxLow)
     # box_origin[0] = boxLow[0]
@@ -81,19 +81,20 @@ def create_cubicgrid(mesh, dx, origin=[0., 0., 0.]):
         for y in range(mesh):
             for x in range(mesh):
                 # x,y,z are integers
-                coord[index, 0] = x*dx + origin[0]
-                coord[index, 1] = y*dx + origin[1]
-                coord[index, 2] = z*dx + origin[2]
+                coord[index, 0] = x * dx + origin[0]
+                coord[index, 1] = y * dx + origin[1]
+                coord[index, 2] = z * dx + origin[2]
                 index += 1
     return coord
 
 
 def write_cubicgrid(mesh, dx, data, filename):
     if write_vti:
-        filename = str(filename)+'.vti'
+        filename = str(filename) + '.vti'
         imageData = vtk.vtkImageData()
         imageData.SetDimensions(mesh, mesh, mesh)
         imageData.SetSpacing(dx, dx, dx)
+        imageData.SetOrigin(box_origin[0], box_origin[1], box_origin[2])
         datadim = data.shape[1]
         imageData.AllocateScalars(vtk.VTK_DOUBLE, datadim)
 
@@ -107,7 +108,7 @@ def write_cubicgrid(mesh, dx, data, filename):
                 for x in range(dims[0]):
                     for k in range(datadim):
                         imageData.SetScalarComponentFromDouble(
-                            x, y, z, k, data[index, k]*(1/viscosity))
+                            x, y, z, k, data[index, k] * (1 / viscosity))
                     index += 1
 
         writer = vtk.vtkXMLImageDataWriter()
@@ -116,7 +117,7 @@ def write_cubicgrid(mesh, dx, data, filename):
         writer.Write()
         writer.Write()
     else:
-        data *= (1/viscosity)
+        data *= (1 / viscosity)
         np.save(filename, data)
 
 
@@ -164,13 +165,13 @@ def calc_flow_write(frame, output):
     trg_value.gather()
     comm.barrier()
     after = time.time()
-    print_rank0("fmm time: ", after-before)
+    print_rank0("fmm time: ", after - before)
 
     if rank == 0:
         before = time.time()
         write_cubicgrid(mesh, dx, trg_value.data, output)
         after = time.time()
-        print_rank0("writing time: ", after-before)
+        print_rank0("writing time: ", after - before)
     print(trg_value.data)
 
 
@@ -180,16 +181,18 @@ def getFrameNumber_lambda(filename): return int(
 
 # %%
 pbc = 0  # Number of dimensions to periodize (0, 1, 2, 3)
-wrk_dir = Path(
-    '/home/alamson/DATA/Chromatin/21-08-26_aLchr1_LEF_acute_angle_hydro_test/result')
+# wrk_dir = Path(
+# '/home/alamson/DATA/Chromatin/21-08-26_aLchr1_LEF_acute_angle_hydro_test/result')
+wrk_dir = Path.cwd()
 read_params(wrk_dir / '../RunConfig.yaml')
 
 # initialize FMM
-dx = boxL*1.0/mesh
+dx = boxL * 1.0 / mesh
 max_pts = 2000  # Max points per OctTree leaf
 # Get MPI parameters
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
+print(box_origin)
 
 
 fmm = Stk3DFMM(mult_order, max_pts, pbc, KERNEL.RPY)
@@ -223,7 +226,8 @@ except FileExistsError:
 # SylinderFileList = am.getFileListSorted('./result*-*/SylinderAscii_*.dat')
 
 index = 0
-for syl_file, prot_file, con_file in zip(syl_vtk_files, prot_vtk_files, con_vtk_files):
+for syl_file, prot_file, con_file in zip(
+        syl_vtk_files, prot_vtk_files, con_vtk_files):
     frame = Frame(str(syl_file), str(prot_file),
                   str(con_file), print_flag=False)
     outfile = folder / f"flow_{getFrameNumber_lambda(syl_file)}"

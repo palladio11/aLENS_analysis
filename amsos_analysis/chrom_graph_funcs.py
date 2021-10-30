@@ -129,13 +129,13 @@ def make_min_distr_plots(com_arr, log_contact_avg=None,
     return fig, ax
 
 
-def make_hic_plot(com_arr, log_contact_avg, vmin=-30):
+def make_hic_plot(com_arr, log_contact_avg, vmin=-7, vmax=None):
     fig, ax = plt.subplots(figsize=(10, 8))
 
     nbeads = com_arr.shape[0]
     x = np.arange(nbeads + 1)[::int((nbeads) / log_contact_avg.shape[0])]
     X, Y = np.meshgrid(x, x)
-    c = ax.pcolorfast(X, Y, log_contact_avg, vmin=vmin)
+    c = ax.pcolorfast(X, Y, log_contact_avg, vmax=vmax, vmin=vmin)
     ax.set_aspect('equal')
     fig.colorbar(c, label="Log contact probability")
 
@@ -219,34 +219,56 @@ def make_segment_distr_graphs(
 
 
 def make_summed_contact_kymo_graph(
-        contact_mat, time_arr, contact_type="", vmin=-30, vmax=10):
-    fig, axarr = plt.subplots(1, 2, figsize=(16, 6))
+        contact_mat, time_arr, contact_type="", vmin=-25, vmax=10, avg_contact_map=None, avg_vmin=-7):
 
     nbeads = contact_mat.shape[0]
+    if isinstance(avg_contact_map, np.ndarray):
+        fig, axarr = plt.subplots(1, 3, figsize=(22, 6))
+        x = np.arange(nbeads + 1)[::int((nbeads) / avg_contact_map.shape[0])]
+        X, Y = np.meshgrid(x, x)
+        c = axarr[2].pcolorfast(X, Y, avg_contact_map, vmin=avg_vmin)
+        axarr[2].set_aspect('equal')
+        _ = fig.colorbar(c, ax=axarr[2], label="Log contact probability")
+
+        _ = axarr[2].set_title('Time average contact map')
+        _ = axarr[2].set_xlabel("Bead index")
+        _ = axarr[2].set_ylabel("Bead index")
+    else:
+        fig, axarr = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Last frame
     x = np.arange(nbeads + 1)[::int((nbeads) / contact_mat.shape[0])]
     X, Y = np.meshgrid(x, x)
-    c0 = axarr[0].pcolorfast(X, Y, np.log(contact_mat[:, :, -1]), vmin=vmin)
+    c1 = axarr[0].pcolorfast(X, Y,
+                             np.log(contact_mat[:, :, -1]), vmin=vmin)
     axarr[0].set_aspect('equal')
-    _ = fig.colorbar(c0, ax=axarr[0], label="Log contact probability")
+    _ = fig.colorbar(c1, ax=axarr[0], label="Log contact probability")
     _ = axarr[0].set_xlabel(r'Bead index')
     _ = axarr[0].set_ylabel(r'Bead index')
+    _ = axarr[0].set_title(
+        'Last frame contact map \n 1 bead $\sim$ 200-400 bp')
 
+    # Contact kymograph
     contact_kymo = np.sum(contact_mat, axis=0) - 1
     y = np.arange(contact_kymo.shape[0] + 1)
     # Add extra time point
     x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
     X, Y = np.meshgrid(x, y)
     if contact_type == "log":
-        c1 = axarr[1].pcolorfast(X, Y, np.log(contact_kymo))
+        c0 = axarr[1].pcolorfast(X, Y, np.log(contact_kymo))
         _ = fig.colorbar(
-            c1,
+            c0,
             ax=axarr[1],
             label="Log sum contact \n probability")
     else:
-        c1 = axarr[1].pcolorfast(X, Y, contact_kymo, vmax=vmax)
-        _ = fig.colorbar(c1, ax=axarr[1], label="Sum contact probability")
+        c0 = axarr[1].pcolorfast(X, Y, contact_kymo, vmax=vmax)
+        _ = fig.colorbar(c0, ax=axarr[1],
+                         label=r"Contact probability (sec$^{-1}$)")
+    _ = axarr[1].set_title(
+        "Contact probabilty 'kymograph'")
     axarr[1].set_xlabel("Time $t$ (sec)")
     axarr[1].set_ylabel("Bead index")
+
     fig.tight_layout()
 
     return fig, axarr, contact_kymo

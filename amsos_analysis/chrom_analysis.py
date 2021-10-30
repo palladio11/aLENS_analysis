@@ -275,12 +275,15 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
     return(pos_avg_arr, pos_std_arr, rad_mean_arr, rad_std_arr)
 
 
-def get_time_avg_contact_mat(com_arr, sigma=.02, avg_block_step=1):
+def get_time_avg_contact_mat(com_arr, sigma=.02, avg_block_step=1, log=True):
     reduc_com_arr = com_arr[::avg_block_step, :, :]  # simple downsampling
     sep_mat = np.linalg.norm(
         reduc_com_arr[:, np.newaxis, :, :] - reduc_com_arr[np.newaxis, :, :, :], axis=2)
-    log_contact_map = log_gauss_weighted_contact(sep_mat, sigma)
-    return log_contact_map.mean(axis=-1)
+    # log_contact_map = log_gauss_weighted_contact(sep_mat, sigma)
+    contact_map = gauss_weighted_contact(sep_mat, sigma)
+    if log:
+        return np.log(contact_map.mean(axis=-1))
+    return contact_map.mean(axis=-1)
 
 
 def get_end_end_distance(com_arr):
