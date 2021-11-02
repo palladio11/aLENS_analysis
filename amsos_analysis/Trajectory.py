@@ -24,7 +24,8 @@ def calcTc(TList):
     Tm = structured_to_unstructured(TList[['mx', 'my', 'mz']])
     Tp = structured_to_unstructured(TList[['px', 'py', 'pz']])
     Tc = (Tm+Tp)*0.5
-    return Tc
+    vec = am.normalize_all(Tp-Tm)
+    return Tc, vec
 
 
 def genTrajectory(files, start=0, end=-1):
@@ -33,16 +34,18 @@ def genTrajectory(files, start=0, end=-1):
         files[start], readProtein=False, sort=True, info=True)
 
     nMT = frame.TList.shape[0]
-    Tc = calcTc(frame.TList)  # center of mass
+    Tc, vec = calcTc(frame.TList)  # center of mass
 
     traj = Tc.copy()  # traj from t=0
     h5.saveData(h5name, traj, '/t_{:08d}'.format(start), 'traj', float)
+    h5.saveData(h5name, vec, '/t_{:08d}'.format(start), 'vec', float)
 
     prev_Tc = None
     end = len(files)+end+1 if end < 0 else end
     for j in range(start+1, end):
+        print("Current step ", j)
         prev_Tc = Tc
-        Tc = calcTc(am.FrameAscii(
+        Tc, vec = calcTc(am.FrameAscii(
             files[j], readProtein=False, sort=True, info=True).TList)
         disp = np.zeros((nMT, 3))  # disp per snapshot
         assert traj.shape == disp.shape
@@ -55,6 +58,7 @@ def genTrajectory(files, start=0, end=-1):
                 disp[i, k] = dx
         traj += disp
         h5.saveData(h5name, traj, '/t_{:08d}'.format(j), 'traj', float)
+        h5.saveData(h5name, vec, '/t_{:08d}'.format(j), 'vec', float)
 
     return
 
