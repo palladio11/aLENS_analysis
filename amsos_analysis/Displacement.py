@@ -3,94 +3,100 @@ import numba as nb
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
+import h5py
 
 import Util.AMSOS as am
-
-parser = am.getDefaultArgParser(
-    'Calculate net displacement along certain direction')
-parser.add_argument('--calcmean', type=bool, dest='calcmean', default=False,
-                    help='if calculate moving average')
-parser.add_argument('--velmax', type=float, dest='velmax', default=1.0,
-                    help='vel max (um/s) for histogram')
-parser.add_argument('--avg', type=int, nargs='+', dest='avg', default=[10, 20, 50, 100],
-                    help='moving average for every ... snapshots')
-parser.add_argument('--axis', type=int, dest='axis', default=0,
-                    help='0,1,2 -> x,y,z axis')
-parser.add_argument('--overwrite', type=bool, dest='overwrite', default=True,
-                    help='overwrite existing npy files')
-
-args = parser.parse_args()
-
-config = am.parseConfig(args.config)
-boxsize = np.array(config['simBoxHigh'])-np.array(config['simBoxLow'])
-pbc = np.array(config['simBoxPBC'])
-deltat = config['timeSnap']  # time between two snapshots
+import Util.HDF5_Wrapper as amh5
+from Util.AMSOS import ParamBase
 
 
-avgWindow = args.avg  # moving average for every ... snapshots
-vel_max = args.velmax  # um/s for histogram
+class Param(ParamBase):
+    def add_argument(self, parser):
+        parser.add_argument('--calcmean', type=bool,  default=False,
+                            help='if calculate moving average')
+        parser.add_argument('--velmax', type=float, dest='velmax', default=1.0,
+                            help='vel max (um/s) for histogram')
+        parser.add_argument('--navgs', type=int, nargs='+', default=[10, 20, 50, 100],
+                            help='moving average for every ... snapshots')
+        parser.add_argument('--axis', type=int, default=0,
+                            help='0,1,2 -> x,y,z axis')
+        return
 
-print('config: ', args.config)
-print('box_size:', boxsize)
-print('average window', avgWindow)
-print('delta t', deltat)
-print('vel_max', vel_max)
-print('plot axis', args.axis)
+    def add_param(self):
+        self.eps = 1e-5
 
+        for navg in self.navgs:
+            outputFolder = self.data_root + os.sep + \
+                self.case_foldername(navg)
+            am.mkdir(outputFolder)
+        return
 
-def genPosHistory():
-    '''posHistory, nMT*nSteps*7: [gid, center, orientation]'''
-    SylinderFileList = am.getFileListSorted('./result*/SylinderAscii_*.dat')
+    def case_casename(self, navg):
+        return 'Displacement_ax{}_{}'.format(self.axis, navg)
 
-    frame = am.FrameAscii(SylinderFileList[0])
-    nMT = frame.TList.shape[0]
-    nSteps = len(SylinderFileList)
-    posHistory = np.zeros(shape=[nMT, nSteps, 7])
-
-    for i in nb.prange(0, len(SylinderFileList)):
-        mt = am.FrameAscii(SylinderFileList[i]).TList
-        posHistory[:, i, 0] = mt[:, 0]  # gid
-        posHistory[:, i, 1:4] = 0.5*(mt[:, 2:5]+mt[:, 5:8])  # center
-        posHistory[:, i, 4:7] = mt[:, 5:8]-mt[:, 2:5]  # orientation
-
-    return posHistory
-
-
-@nb.jit
-def genDispHistory(pos):
-    '''dispHistory, nMT*nSteps*3: [displacement]'''
-    nMT = pos.shape[0]
-    steps = pos.shape[1]
-    disp = np.zeros((nMT, steps, 3))
-    for i in nb.prange(nMT):
-        for j in range(1, steps):
-            for k in range(3):
-                x0 = pos[i, j-1, 1+k]
-                x1 = pos[i, j, 1+k]
-                # filter PBC jump
-                dx = am.findMove(x0, x1, boxsize[k]) if pbc[k] else x1-x0
-                disp[i, j, k] = disp[i, j-1, k]+dx
-
-    return disp
+    def case_foldername(self, navg):
+        return self.case_casename(navg)
 
 
-@nb.jit
-def genMovingAverage(disp, avgsteps):
-    '''meanVelHistory, nMT*(nSteps-avgsteps)*3, [meanVel] '''
-    nMT = disp.shape[0]
-    nsteps = disp.shape[1]
-    meanVel = np.zeros((nMT, nsteps-avgsteps, 3))
-    avgTime = deltat * avgsteps
-    for i in nb.prange(nMT):
-        for j in range(nsteps-avgsteps):
-            meanVel[i, j] = (disp[i, j+avgsteps, :]-disp[i, j, :])/avgTime
+def convert():
+    '''convert hdf5 file to npy file'''
+    if os.path.exists('traj_orient.npy'):
+        return np.load('traj_orient.npy')
 
-    return meanVel
+    f = h5py.File(h5file, 'r')
+    keys = list(f.keys())
+    nsteps = len(keys)
+    npars = len(f[keys[0]]['traj'])
+    traj = np.zeros((nsteps, npars, 6))
+    for i in range(nsteps):
+        traj[i, :, :3] = f[keys[i]]['traj']
+        traj[i, :, 3:] = f[keys[i]]['vec']
+    f.close()
+
+    np.save('traj_orient.npy', traj, allow_pickle=False)
+
+    return traj
 
 
-def plot_fit(disp, dt, title):
-    ntraj = disp.shape[0]
-    nsteps = disp.shape[1]
+def process(data, index, navg, params):
+    assert index >= navg
+    vel = (data[index, :, :3] - data[index-navg, :, :3]) / \
+        (navg*params.config['timeSnap'])
+    foldername = params.case_foldername(navg)
+    amh5.saveData(foldername+os.sep+'Displacement',
+                  vel, "{:08d}".format(index), 'vel_avg', float)
+
+    assert vel.shape[1] == 3
+    bins = np.linspace(-params.velmax, params.velmax, num=41)
+    plt.clf()
+    axplus = data[index, :, 3+params.axis] > 0
+    axminus = data[index, :, 3+params.axis] < 0
+    plt.hist(vel[axplus, params.axis], bins=bins,
+             label='orient toward axis +, count = {}'.format(
+                 np.count_nonzero(axplus)),
+             density=True, alpha=0.4)
+    plt.hist(vel[axminus, params.axis], bins=bins,
+             label='orient toward axis -, count = {}'.format(
+                 np.count_nonzero(axminus)),
+             density=True, alpha=0.4)
+    plt.legend(loc='upper left')
+    plt.xlabel('Vel axis {:d}, um/s'.format(params.axis))
+    plt.ylabel('PDF')
+    plt.ylim(0, 4/params.velmax)
+    plt.xlim(-params.velmax, params.velmax)
+    plt.tick_params(axis="x", direction="in")
+    plt.tick_params(axis="y", direction="in")
+    plt.annotate('Snapshot {:06d}'.format(
+        index), (0.7, 0.9), xycoords='axes fraction')
+    plt.savefig(foldername+os.sep +
+                'vel_ax{:d}_hist_{:06d}'.format(params.axis, index)+'.png', dpi=300)
+
+    return
+
+
+def plot_fit(data, params, mask, title):
+    nsteps = data.shape[0]
+    ntraj = data.shape[1]
     frame_transient = int(nsteps/2)  # find fit using the last half of data
     if ntraj < 1:
         plt.clf()
@@ -101,11 +107,16 @@ def plot_fit(disp, dt, title):
         filename = title.replace(' ', '_')
         plt.savefig(filename+'.png', dpi=300)
         return
+
+    disp = data[:, mask, params.axis]
+    disp = disp - disp[0, ...]
+    dt = params.config['timeSnap']
+
     # mean
-    mean = np.mean(disp, axis=0)
+    mean = np.mean(disp, axis=1)
     time = np.linspace(0, dt*nsteps, nsteps)
     # std
-    stddev = np.std(disp, axis=0)
+    stddev = np.std(disp, axis=1)
     # fit
     f = lambda t, *v: v[0] * t + v[1]
     popt, pcov = so.curve_fit(
@@ -126,116 +137,75 @@ def plot_fit(disp, dt, title):
     plt.plot(time, time*vel+offset, '--', label='linear fit')
     plt.xlabel('time s')
     plt.ylabel('displacement um')
-    plt.legend(title='nsamples {:6d}\n'.format(
-        ntraj)+'V = {:6e}'.format(vel)+' um/s\n'+'D = {:6e}'.format(diff)+' um^2/s')
+    plt.legend(title='nsamples {:6d}\n V = {:g} um/s\n D = {:g} um^2/s'.format(
+        disp.shape[1], vel, diff))
     plt.title(title)
     filename = title.replace(' ', '_')
     plt.savefig(filename+'.png', dpi=300)
 
+    return
 
-def plotVelDiff(pos, disp, axis=0):
+
+def plotVelDiff(data, params):
     '''axis=0,1,2 means x,y,z axis'''
     # initial toward right, moving right
-    rr = np.logical_and(pos[:, 0, 4+axis] > 0,
-                        disp[:, -1, axis] > disp[:, 0, axis])
-    rl = np.logical_and(pos[:, 0, 4+axis] > 0,
-                        disp[:, -1, axis] < disp[:, 0, axis])
-    lr = np.logical_and(pos[:, 0, 4+axis] < 0,
-                        disp[:, -1, axis] > disp[:, 0, axis])
-    ll = np.logical_and(pos[:, 0, 4+axis] < 0,
-                        disp[:, -1, axis] < disp[:, 0, axis])
+    disp_t0 = data[0, :, :3]
+    disp_end = data[-1, :, :3]
+    ort_t0 = data[0, :, 3:]
 
-    dispRR = disp[rr, :, axis]
-    dispRL = disp[rl, :, axis]
-    dispLR = disp[lr, :, axis]
-    dispLL = disp[ll, :, axis]
-    plot_fit(dispRR, deltat,
+    axis = params.axis
+
+    rr = np.logical_and(ort_t0[:, axis] > 0,
+                        disp_end[:, axis] > disp_t0[:,  axis])
+    rl = np.logical_and(ort_t0[:, axis] > 0,
+                        disp_end[:, axis] < disp_t0[:,  axis])
+    lr = np.logical_and(ort_t0[:, axis] < 0,
+                        disp_end[:, axis] > disp_t0[:,  axis])
+    ll = np.logical_and(ort_t0[:, axis] < 0,
+                        disp_end[:, axis] < disp_t0[:,  axis])
+
+    plot_fit(data, params, rr,
              'Orient right moving right axis {:d}'.format(axis))
-    plot_fit(dispRL, deltat,
+    plot_fit(data, params, rl,
              'Orient right moving left axis {:d}'.format(axis))
-    plot_fit(dispLR, deltat,
+    plot_fit(data, params, lr,
              'Orient left moving right axis {:d}'.format(axis))
-    plot_fit(dispLL, deltat,
+    plot_fit(data, params, ll,
              'Orient left moving left axis {:d}'.format(axis))
+    return
 
 
-def plotMovingAverage(avgsteps, axis=0):
-    folderName = 'velx_'+str(avgsteps)
-    try:
-        os.mkdir(folderName)
-    except FileExistsError:
-        pass
+def plotTraj(traj, ntrajs, axis):
 
-    pos = np.load('posHistory.npy')
-    meanVelHistory = np.load('meanVelHistory_'+str(avgsteps)+'.npy')
-    # plot vx history of 5 rods
-    plt.clf()
-    for i in range(5):
-        plt.plot(meanVelHistory[i, :, axis], label="Gid"+str(i))
-    plt.xlabel('frame index')
-    plt.ylabel('Vel {:d}, um/s'.format(axis))
-    plt.savefig(folderName+os.sep +
-                'Vel_ax{:d}_History.png'.format(axis), dpi=300)
+    def x(i): return [traj[_, i, axis] - traj[0, i, axis]
+                      for _ in range(traj.shape[0])]
+    for i in range(ntrajs):
+        plt.plot(x(i), label='index {}'.format(i))
 
-    # plot vx histogram for each frame
-    bins = np.linspace(-vel_max, vel_max, num=41)
-    ortr = pos[:, 0, 4+axis] > 0  # orient right
-    ortl = pos[:, 0, 4+axis] < 0  # orient left
+    plt.xlabel('index of snapshot')
+    plt.legend()
+    plt.ylabel('displacement along axis {} / um'.format(axis))
+    plt.savefig('Displacement_ax{}.png'.format(axis), dpi=300)
 
-    nsteps = meanVelHistory.shape[1]
-    for i in range(nsteps):
-        plt.clf()
-        plt.hist(meanVelHistory[ortr][:, i, axis], bins=bins,
-                 label='orient right', density=True, alpha=0.4)
-        plt.hist(meanVelHistory[ortl][:, i, axis], bins=bins,
-                 label='orient left', density=True, alpha=0.4)
-        plt.legend(loc='upper left')
-        plt.xlabel('Vel axis {:d}, um/s'.format(axis))
-        plt.ylabel('PDF')
-        plt.ylim(0, 4/vel_max)
-        plt.xlim(-vel_max, vel_max)
-        plt.tick_params(axis="x", direction="in")
-        plt.tick_params(axis="y", direction="in")
-        plt.annotate('Snapshot {:06d}'.format(
-            i), (0.7, 0.9), xycoords='axes fraction')
-        plt.savefig(folderName+os.sep +
-                    'vel_ax{:d}_hist_{:06d}'.format(axis, i)+'.png', dpi=300)
-    # generate movies
-    path = os.path.abspath(os.path.curdir)
-    names = path.split('/')
-    casename = names[-2]
-    cmd = "ffmpeg -y -framerate 30 -pattern_type glob -i '"+folderName+os.sep+'vel_ax{:d}_hist_'.format(axis) + \
-        "*.png' -c:v libx264 -pix_fmt yuv420p -profile:v high -level 4.2 -crf 17 -vf scale=1920:-2 " + \
-        casename+'_vel_ax{:d}_hist_'.format(axis)+str(avgsteps)+".mp4"
-    print(cmd)
-    os.system(cmd)
-
-
-def main():
-    if args.overwrite or (not os.path.isfile('posHistory.npy')):
-        pos = genPosHistory()
-        np.save('posHistory', pos)
-    else:
-        pos = np.load('posHistory.npy')
-
-    if args.overwrite or (not os.path.isfile('dispHistory.npy')):
-        disp = genDispHistory(pos)
-        np.save('dispHistory', disp)
-    else:
-        disp = np.load('dispHistory.npy')
-
-    plotVelDiff(pos, disp, args.axis)
-
-    if not args.calcmean:
-        exit()
-
-    for steps in avgWindow:
-        avgfname = 'meanVelHistory_'+str(steps)
-        if not os.path.isfile(avgfname+'.npy'):
-            data = genMovingAverage(disp, steps)
-            np.save(avgfname, data)
-        plotMovingAverage(steps, args.axis)
+    return
 
 
 if __name__ == '__main__':
-    main()
+    params = Param("calculate displacement along different directions")
+    h5file = 'Trajectory.hdf5'
+
+    data = convert()
+
+    nsteps = data.shape[0]
+    npars = data.shape[1]
+
+    plotTraj(data, 8, 0)
+
+    plotVelDiff(data, params)
+
+    for navg in params.navgs:
+        amh5.newFile(params.case_foldername(navg)+os.sep+'Displacement')
+        for i in range(params.start+navg,
+                       nsteps if params.end <= 0 else params.end,
+                       params.stride):
+            process(data, i, navg, params)
