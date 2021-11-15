@@ -10,6 +10,7 @@ Description:
 import numpy as np
 import math
 import yaml
+import vtk
 from numba import jit, vectorize
 import argparse
 
@@ -73,6 +74,17 @@ class protein():
 
     def get_dat(self):
         return self.info[1:]
+
+
+class con_block():
+
+    """Docstring for con_block. """
+
+    def __init__(self,):
+        """ Need only the position of to acting points to start. Other variables
+        are added when this is filled."""
+        end0 = None
+        end1 = None
 
 
 ##########################################

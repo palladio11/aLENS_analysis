@@ -34,8 +34,8 @@ class Frame:
         self.proteins = []
         self.conBlocks = []
         self.proteinBlocks = []
-        self.parseSylinderFile(sylinderFile)
-        self.parseProteinFile(proteinFile)
+        # self.parseSylinderFile(sylinderFile)
+        # self.parseProteinFile(proteinFile)
         self.parseConBlockFile(conBlockFile)
 
     def parseFile(self, dataFile, objType, objList):

@@ -70,8 +70,8 @@ def parse_args():
         plt.rcParams['image.cmap'] = opts.colormap
 
     opts.params = {
-        'n_graph': 10,
-        'fps': 15,
+        'n_graph': 5,
+        'fps': 20,
         # 'n_graph': 1,
         # 'fps': 2,
         'style': "log_contact",
