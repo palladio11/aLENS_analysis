@@ -21,7 +21,11 @@ from scipy.integrate import quad
 import scipy.stats as stats
 
 
-def gauss_weighted_contact(sep_mat, sigma=.020):
+def gauss_weighted_contact(sep_mat, sigma=.020, radius_arr=None):
+    if radius_arr is not None:
+        surface_mat = radius_arr[np.newaxis, :] + radius_arr[:, np.newaxis]
+        return np.exp(-np.power(sep_mat - surface_mat[:, :, np.newaxis], 2) /
+                      (2. * (sigma * sigma)))
     return np.exp(-np.power(sep_mat, 2) / (2. * (sigma * sigma)))
 
 
@@ -275,12 +279,13 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
     return(pos_avg_arr, pos_std_arr, rad_mean_arr, rad_std_arr)
 
 
-def get_time_avg_contact_mat(com_arr, sigma=.02, avg_block_step=1, log=True):
+def get_time_avg_contact_mat(
+        com_arr, sigma=.02, avg_block_step=1, log=True, radius_arr=None):
     reduc_com_arr = com_arr[::avg_block_step, :, :]  # simple downsampling
     sep_mat = np.linalg.norm(
         reduc_com_arr[:, np.newaxis, :, :] - reduc_com_arr[np.newaxis, :, :, :], axis=2)
     # log_contact_map = log_gauss_weighted_contact(sep_mat, sigma)
-    contact_map = gauss_weighted_contact(sep_mat, sigma)
+    contact_map = gauss_weighted_contact(sep_mat, sigma, radius_arr)
     if log:
         return np.log(contact_map.mean(axis=-1))
     return contact_map.mean(axis=-1)
