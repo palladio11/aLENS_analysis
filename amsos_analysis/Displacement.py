@@ -117,8 +117,13 @@ def plot_fit(data, params, mask, title):
         return
 
     dt = params.config['timeSnap']
-    fitframe = int(fittime/dt)
-    frame_transient = int(fitframe/2)
+
+    if fittime > 0:
+        fitframe = int(fittime/dt)
+    else:
+        fitframe = ntraj
+
+    frame_transient = fitframe//2
 
     # mean
     mean = np.mean(disp, axis=1)
