@@ -102,7 +102,11 @@ def plot_fit(data, params, mask, title):
     fittime = params.fittime
     # find fit using the last half of data
 
-    if ntraj < 1:
+    disp = data[:, mask, params.axis]
+    disp = disp - disp[0, ...]
+    print(disp.shape)
+
+    if disp.shape[1] < 1:
         plt.clf()
         plt.xlabel('time s')
         plt.ylabel('displacement um')
@@ -112,26 +116,25 @@ def plot_fit(data, params, mask, title):
         plt.savefig(filename+'.png', dpi=300)
         return
 
-    disp = data[:, mask, params.axis]
-    disp = disp - disp[0, ...]
     dt = params.config['timeSnap']
-
     fitframe = int(fittime/dt)
     frame_transient = int(fitframe/2)
 
     # mean
     mean = np.mean(disp, axis=1)
-    time = np.linspace(0, dt*nsteps, nsteps)
+    time = np.linspace(0, dt*nsteps, nsteps, endpoint=False)
     # std
     stddev = np.std(disp, axis=1)
     # fit
     f = lambda t, *v: v[0] * t + v[1]
+    # print(time[frame_transient:fitframe], mean[frame_transient:fitframe])
     popt, pcov = so.curve_fit(
         f, time[frame_transient:fitframe], mean[frame_transient:fitframe], [1, 0])
     vel = popt[0]
     offset = popt[1]
     print(popt, pcov)
     f = lambda t, *d: 2*d[0]*(t-dt*frame_transient)+d[1]
+    # print(time[frame_transient:fitframe], stddev[frame_transient:fitframe])
     popt, pcov = so.curve_fit(
         f, time[frame_transient:fitframe], stddev[frame_transient:fitframe]**2, [1, 0])
     print(popt, pcov)
