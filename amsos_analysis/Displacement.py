@@ -20,6 +20,8 @@ class Param(ParamBase):
                             help='moving average for every ... snapshots')
         parser.add_argument('--axis', type=int, default=0,
                             help='0,1,2 -> x,y,z axis')
+        parser.add_argument('--fittime', type=float, default=0,
+                            help='fit between time = [fittime/2, fittime]')
         return
 
     def add_param(self):
@@ -97,7 +99,9 @@ def process(data, index, navg, params):
 def plot_fit(data, params, mask, title):
     nsteps = data.shape[0]
     ntraj = data.shape[1]
-    frame_transient = int(nsteps/2)  # find fit using the last half of data
+    fittime = params.fittime
+    # find fit using the last half of data
+
     if ntraj < 1:
         plt.clf()
         plt.xlabel('time s')
@@ -112,6 +116,9 @@ def plot_fit(data, params, mask, title):
     disp = disp - disp[0, ...]
     dt = params.config['timeSnap']
 
+    fitframe = int(fittime/dt)
+    frame_transient = int(fitframe/2)
+
     # mean
     mean = np.mean(disp, axis=1)
     time = np.linspace(0, dt*nsteps, nsteps)
@@ -120,13 +127,13 @@ def plot_fit(data, params, mask, title):
     # fit
     f = lambda t, *v: v[0] * t + v[1]
     popt, pcov = so.curve_fit(
-        f, time[frame_transient:], mean[frame_transient:], [1, 0])
+        f, time[frame_transient:fitframe], mean[frame_transient:fitframe], [1, 0])
     vel = popt[0]
     offset = popt[1]
     print(popt, pcov)
     f = lambda t, *d: 2*d[0]*(t-dt*frame_transient)+d[1]
     popt, pcov = so.curve_fit(
-        f, time[frame_transient:], stddev[frame_transient:]**2, [1, 0])
+        f, time[frame_transient:fitframe], stddev[frame_transient:fitframe]**2, [1, 0])
     print(popt, pcov)
     diff = popt[0]
     # plot
