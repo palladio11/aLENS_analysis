@@ -35,7 +35,7 @@ import matplotlib.colors as colors
 from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              get_all_rog_stats, cart_distr_hists,
                              cylin_distr_hists, rad_distr_hists,
-                             calc_rad_of_gyration)
+                             calc_rad_of_gyration, get_contact_kymo_data)
 
 
 def make_total_distr_plots(com_arr, log_contact_avg=None, hist_max=1.,
@@ -307,6 +307,51 @@ def plot_condensate_kymo(ax, edge_coords, axis_label_flag=True, ylabel=''):
     if axis_label_flag:
         ax.set_xlabel("Time $t$ (sec)")
         ax.set_ylabel(ylabel)
+
+
+def plot_contact_kymo(fig, ax, time_arr, contact_mat,
+                      contact_type="", vmax=10):
+    """TODO: Docstring for plot_contact_kymo.
+
+    @param ax TODO
+    @param contact_mat TODO
+    @return: TODO
+
+    """
+    contact_kymo = get_contact_kymo_data(contact_mat)
+    y = np.arange(contact_kymo.shape[0] + 1)
+    # Add extra time point
+    x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
+    X, Y = np.meshgrid(x, y)
+    if contact_type == "log":
+        c = ax.pcolorfast(X, Y, np.log(contact_kymo))
+        _ = fig.colorbar(c, ax=ax, label="Log sum contact \n probability")
+    else:
+        c = ax.pcolorfast(X, Y, contact_kymo, vmax=vmax)
+        _ = fig.colorbar(c, ax=ax, label=r"Contact probability")
+    _ = ax.set_title("Contact probabilty 'kymograph'")
+    ax.set_xlabel("Time $t$ (sec)")
+    ax.set_ylabel("Bead index")
+
+
+def plot_pos_kymo(fig, ax, time_arr, pos_hist_kymo, bin_edges, vmax=60):
+    """TODO: Docstring for plot_contact_kymo.
+
+    @param ax TODO
+    @param contact_mat TODO
+    @return: TODO
+
+    """
+    y = bin_edges
+    # Add extra time point
+    x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
+    X, Y = np.meshgrid(x, y)
+
+    ax.set_title("Position kymograph")
+    c0 = ax.pcolorfast(X, Y, pos_hist_kymo, vmax=vmax)
+    fig.colorbar(c0, ax=ax, label=r"Number of beads")
+    ax.set_ylabel(r"Position $x$ ($\mu$m)")
+    ax.set_xlabel("Time $t$ (sec)")
 
 
 ##########################################

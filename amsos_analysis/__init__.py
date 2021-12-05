@@ -26,6 +26,7 @@ from .chrom_analysis import (gauss_weighted_contact,
                              find_neighbors,
                              get_pos_kymo_data,
                              get_pos_cond_data,
+                             smooth_kymo_mat,
                              )
 
 from .rouse_mode_analysis import (get_rouse_modes_at_t,
@@ -41,7 +42,9 @@ from .chrom_graph_funcs import (plot_link_energy_vs_time,
                                 make_hic_plot,
                                 make_summed_contact_kymo_graph,
                                 plot_rog_vs_time_graph,
-                                plot_condensate_kymo
+                                plot_condensate_kymo,
+                                plot_contact_kymo,
+                                plot_pos_kymo,
                                 )
 
 from .physical_scales import (get_drag_coeff,

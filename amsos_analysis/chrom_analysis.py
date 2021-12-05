@@ -153,6 +153,7 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
 
     """
     # Doesn't matter which smoothing occurs first
+    smooth_contact_kymo = smooth_kymo_mat(contact_kymo, bead_win, time_win)
     smooth_contact_kymo = deepcopy(contact_kymo)
     if bead_win > 0:
         smooth_contact_kymo = savgol_filter(contact_kymo, bead_win, 3, axis=0)
@@ -172,8 +173,25 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
     return cond_edge_coords, cond_num_arr
 
 
+def smooth_kymo_mat(mat, y_win=0, time_win=0):
+    """TODO: Docstring for smooth_mat.
+
+    @param mat TODO
+    @param x_win TODO
+    @param y_win TODO
+    @return: TODO
+
+    """
+    smooth_kymo = deepcopy(mat)
+    if y_win > 0:
+        smooth_kymo = savgol_filter(mat, y_win, 3, axis=0)
+    if time_win > 0:
+        smooth_kymo = savgol_filter(smooth_kymo, time_win, 3, axis=-1)
+    return smooth_kymo
+
+
 def get_pos_cond_data(time_arr, pos_kymo, bin_centers, threshold,
-                      edge_win=0, time_win=0):
+                      bin_win=0, time_win=0):
     """TODO: Docstring for get_contact_cond_data.
 
     @param time_arr TODO
@@ -184,17 +202,12 @@ def get_pos_cond_data(time_arr, pos_kymo, bin_centers, threshold,
     @return: TODO
 
     """
+    smooth_pos_kymo = smooth_kymo_mat(pos_kymo, bin_win, time_win)
     # Doesn't matter which smoothing occurs first
-    smooth_contact_kymo = deepcopy(pos_kymo)
-    if edge_win > 0:
-        smooth_contact_kymo = savgol_filter(pos_kymo, edge_win, 3, axis=0)
-    if time_win > 0:
-        smooth_contact_kymo = savgol_filter(smooth_contact_kymo,
-                                            time_win, 3, axis=-1)
     cond_edge_coords = []
     cond_num_arr = []
     for i, t in enumerate(time_arr):
-        edges_inds = contiguous_regions(smooth_contact_kymo[:, i] > threshold)
+        edges_inds = contiguous_regions(smooth_pos_kymo[:, i] > threshold)
         cond_num_arr += [len(edges_inds)]
         for start, end in edges_inds:
             cond_edge_coords += [[t, bin_centers[start], bin_centers[end]]]
