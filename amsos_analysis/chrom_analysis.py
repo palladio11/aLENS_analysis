@@ -172,6 +172,38 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
     return cond_edge_coords, cond_num_arr
 
 
+def get_pos_cond_data(time_arr, pos_kymo, threshold,
+                      edge_win=0, time_win=0):
+    """TODO: Docstring for get_contact_cond_data.
+
+    @param time_arr TODO
+    @param contact_kymo TODO
+    @param threshold TODO
+    @param bead_win TODO
+    @param time_win TODO
+    @return: TODO
+
+    """
+    # Doesn't matter which smoothing occurs first
+    smooth_contact_kymo = deepcopy(pos_kymo)
+    if edge_win > 0:
+        smooth_contact_kymo = savgol_filter(pos_kymo, edge_win, 3, axis=0)
+    if time_win > 0:
+        smooth_contact_kymo = savgol_filter(smooth_contact_kymo,
+                                            time_win, 3, axis=-1)
+    cond_edge_coords = []
+    cond_num_arr = []
+    for i, t in enumerate(time_arr):
+        edges_inds = contiguous_regions(smooth_contact_kymo[:, i] > threshold)
+        cond_num_arr += [len(edges_inds)]
+        for start, end in edges_inds:
+            cond_edge_coords += [[t, start, end]]
+
+    cond_edge_coords = np.asarray(cond_edge_coords)
+    cond_num_arr = np.asarray(cond_num_arr)
+    return cond_edge_coords, cond_num_arr
+
+
 def get_sep_hist(h5_data, nbins=100, ss_ind=0, write=False):
     """Returns a 2D histogram of bead separations vs time
 
