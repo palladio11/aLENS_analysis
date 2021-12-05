@@ -104,10 +104,12 @@ def get_walltime(log_path):
             line = rlf.readline()
         start_wtime = pattern.search(line).group(0)
 
-        for line in rlf:
-            pass
+        for line in reversed(rlf.readlines()):
+            if not pattern.search(line):
+                continue
+            end_wtime = pattern.search(line).group(0)
+            break
 
-        end_wtime = pattern.search(line).group(0)
     stripstr = '[%Y-%m-%d %H:%M:%S.%f]'
     end_dt = datetime.strptime(end_wtime, stripstr)
     start_dt = datetime.strptime(start_wtime, stripstr)

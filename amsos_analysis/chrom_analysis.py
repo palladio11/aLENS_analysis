@@ -66,6 +66,30 @@ def get_link_energy_arrays(h5_data, write=False):
     return mean_energy, sem_energy, kbt
 
 
+def get_link_tension(h5_data, write=False):
+    """ Get the force on a bead for every time step
+
+    @param h5_data HDF5 data file to analyze with all raw data about filaments
+    @param write If true, will write data directly to the analysis group in
+                 the h5_data file.
+    @return: TODO
+
+    """
+    sy_dat = h5_data['raw_data']['sylinders'][...]
+    params = yaml.safe_load(h5_data.attrs['RunConfig'])
+    k_spring = params['linkKappa']
+
+    rest_length = params['linkGap'] + sy_dat[1:, 1, :] + sy_dat[:-1, 1, :]
+    sep_vec = sy_dat[1:, 2:5, :] - sy_dat[:-1, 5:8, :]
+
+    sep_mag = np.linalg.norm(sep_vec, axis=1)
+
+    tension_arr = k_spring * (sep_mag - rest_length)
+    # mean_energy = np.mean(energy_arr, axis=0)
+    # sem_energy = stats.sem(energy_arr, axis=0)
+    return tension_arr
+
+
 def get_sep_hist(h5_data, nbins=100, ss_ind=0, write=False):
     """Returns a 2D histogram of bead separations vs time
 

@@ -426,6 +426,11 @@ def calc_rad_of_gyration(pos_mat):
     return np.sqrt(rog_sqr_arr)
 
 
+def make_smoothed_kymo_plot(contact_mat, time_arr):
+    fig, ax = plt.subplots(figsize=(10, 8))
+    return fig, ax
+
+
 ##########################################
 if __name__ == "__main__":
     print("Not implemented yet")
