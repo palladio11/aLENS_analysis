@@ -137,7 +137,7 @@ def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100):
                                        range=(range_min, range_max))
         hist_arr += [hist]
 
-    return np.asarray(hist_arr), bin_edges
+    return time_arr, np.asarray(hist_arr).T, bin_edges
 
 
 def get_contact_cond_data(time_arr, contact_kymo, threshold,
@@ -172,7 +172,7 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
     return cond_edge_coords, cond_num_arr
 
 
-def get_pos_cond_data(time_arr, pos_kymo, threshold,
+def get_pos_cond_data(time_arr, pos_kymo, bin_centers, threshold,
                       edge_win=0, time_win=0):
     """TODO: Docstring for get_contact_cond_data.
 
@@ -197,7 +197,7 @@ def get_pos_cond_data(time_arr, pos_kymo, threshold,
         edges_inds = contiguous_regions(smooth_contact_kymo[:, i] > threshold)
         cond_num_arr += [len(edges_inds)]
         for start, end in edges_inds:
-            cond_edge_coords += [[t, start, end]]
+            cond_edge_coords += [[t, bin_centers[start], bin_centers[end]]]
 
     cond_edge_coords = np.asarray(cond_edge_coords)
     cond_num_arr = np.asarray(cond_num_arr)

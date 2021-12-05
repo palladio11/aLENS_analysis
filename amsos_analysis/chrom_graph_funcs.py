@@ -289,6 +289,26 @@ def plot_link_energy_vs_time(ax, h5_data, ss_frac=.75):
     ax.set_xlabel("Time (sec)")
 
 
+def plot_condensate_kymo(ax, edge_coords, axis_label_flag=True, ylabel=''):
+    """TODO: Docstring for plot_contact_conden_kymo.
+
+    @param ax TODO
+    @param edge_coords TODO
+    @return: None
+
+    """
+    ax.scatter(edge_coords[:, 0], edge_coords[:, 1], label='start')
+    ax.scatter(edge_coords[:, 0], edge_coords[:, 2], label='end')
+    ax.scatter(edge_coords[:, 0], .5 *
+               (edge_coords[:, 2] + edge_coords[:, 1]), label='center')
+    ax.vlines(edge_coords[:, 0], edge_coords[:, 1],
+              edge_coords[:, 2], color='k', alpha=.01)
+    # ax.legend(loc='lower center', bbox_to_anchor=(.5, 1.05))
+    if axis_label_flag:
+        ax.set_xlabel("Time $t$ (sec)")
+        ax.set_ylabel(ylabel)
+
+
 ##########################################
 if __name__ == "__main__":
     print("Not implemented yet")

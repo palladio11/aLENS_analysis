@@ -23,7 +23,9 @@ from .chrom_analysis import (gauss_weighted_contact,
                              get_time_avg_contact_mat,
                              get_end_end_distance,
                              calc_rad_of_gyration,
-                             find_neighbors
+                             find_neighbors,
+                             get_pos_kymo_data,
+                             get_pos_cond_data,
                              )
 
 from .rouse_mode_analysis import (get_rouse_modes_at_t,
@@ -31,14 +33,15 @@ from .rouse_mode_analysis import (get_rouse_modes_at_t,
                                   get_rouse_mode_corr,
                                   get_rouse_mode_corr_fast,)
 
-from .chrom_graph_funcs import (graph_link_energy_vs_time,
+from .chrom_graph_funcs import (plot_link_energy_vs_time,
                                 make_total_distr_plots,
                                 make_min_distr_plots,
                                 make_segment_distr_graphs,
                                 make_rog_vs_time_graph,
-                                plot_rog_vs_time_graph,
                                 make_hic_plot,
-                                make_summed_contact_kymo_graph
+                                make_summed_contact_kymo_graph,
+                                plot_rog_vs_time_graph,
+                                plot_condensate_kymo
                                 )
 
 from .physical_scales import (get_drag_coeff,
