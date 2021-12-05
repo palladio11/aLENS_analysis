@@ -38,30 +38,6 @@ from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              calc_rad_of_gyration)
 
 
-def graph_link_energy_vs_time(ax, h5_data, ss_frac=.75):
-    """TODO: Docstring for plot_energy_vs_time.
-
-    @param h5_data TODO
-    @return: TODO
-
-    """
-    mean_energy, sem_energy, expt_energy = get_link_energy_arrays(h5_data)
-    time = h5_data['time'][...]
-
-    ax.plot(time, mean_energy)
-    ax.fill_between(time,
-                    (mean_energy - sem_energy),
-                    (mean_energy + sem_energy),
-                    color='blue',
-                    alpha=0.1)
-
-    energy_mean = mean_energy[int(mean_energy.size * ss_frac):].mean()
-
-    ax.axhline(energy_mean, color='r')
-    ax.set_ylabel(r"Mean spring energy (pN$\cdot \mu$m)")
-    ax.set_xlabel("Time (sec)")
-
-
 def make_total_distr_plots(com_arr, log_contact_avg=None, hist_max=1.,
                            rel_ind=0, vmin=-50):
     fig, axarr = plt.subplots(2, 3, figsize=(26, 16))
@@ -287,6 +263,30 @@ def plot_rog_vs_time_graph(ax, time_arr, com_arr, label=None):
     rog_arr = calc_rad_of_gyration(com_arr)
     _ = ax.plot(time_arr, rog_arr, label=label)
     return
+
+
+def plot_link_energy_vs_time(ax, h5_data, ss_frac=.75):
+    """TODO: Docstring for plot_energy_vs_time.
+
+    @param h5_data TODO
+    @return: TODO
+
+    """
+    mean_energy, sem_energy, expt_energy = get_link_energy_arrays(h5_data)
+    time = h5_data['time'][...]
+
+    ax.plot(time, mean_energy)
+    ax.fill_between(time,
+                    (mean_energy - sem_energy),
+                    (mean_energy + sem_energy),
+                    color='blue',
+                    alpha=0.1)
+
+    energy_mean = mean_energy[int(mean_energy.size * ss_frac):].mean()
+
+    ax.axhline(energy_mean, color='r')
+    ax.set_ylabel(r"Mean spring energy (pN$\cdot \mu$m)")
+    ax.set_xlabel("Time (sec)")
 
 
 ##########################################

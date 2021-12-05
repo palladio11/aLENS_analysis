@@ -85,9 +85,55 @@ def get_link_tension(h5_data, write=False):
     sep_mag = np.linalg.norm(sep_vec, axis=1)
 
     tension_arr = k_spring * (sep_mag - rest_length)
-    # mean_energy = np.mean(energy_arr, axis=0)
-    # sem_energy = stats.sem(energy_arr, axis=0)
     return tension_arr
+
+
+def get_contact_kymo_data(contact_mat):
+    """Using a contact map, return a matrix with rows for the total contact
+    probability of each bead and columns for each time point in simulation.
+
+    @param contact_mat nbead x nbead x time points matrix of contact probabilities
+    @return: TODO
+
+    """
+    # Remove interaction with self and divide by 2 to not double count contacts
+    return (np.sum(contact_mat, axis=0) - 1) * .5
+
+
+def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100):
+    """Using center of all spheres, return a matrix with rows for n beads in a
+    range along the axis of the two stationary end beads and columns for each
+    time point in simulation.
+
+
+    @param h5_data Simulation hdf5 data
+    @return: TODO
+
+    """
+    time_arr = h5_data['time'][ts_range[0]:ts_range[-1]]
+    # Get size of the system
+    params = yaml.safe_load(h5_data.attrs['RunConfig'])
+    sim_box_low = np.asarray(params['simBoxLow'])
+    sim_box_high = np.asarray(params['simBoxHigh'])
+    # Get center of mass of all beads for all times
+    sy_dat = h5_data['raw_data']['sylinders'][
+        bead_range[0]:bead_range[1], :, ts_range[0]:ts_range[-1]]
+    com_arr = .5 * (sy_dat[:, 2:5, :] + sy_dat[:, 5:8, :])
+    # Project bead positions onto unit vector from first to last bead
+    proj_vec = com_arr[-1, :, 0] - com_arr[0, :, 0]
+    proj_vec /= np.linalg.norm(proj_vec)
+    proj_arr = np.einsum('ijk,j->ik', com_arr, proj_vec)
+    # Set range of histograms
+    range_min = np.dot(sim_box_low, proj_vec)
+    range_max = np.dot(sim_box_high, proj_vec)
+    # Make a series of histograms for each time point
+    hist_arr = []
+    for i, proj in enumerate(proj_arr.T):
+        hist, bin_edges = np.histogram(proj, bins=bins,
+                                       range=(range_min, range_max))
+        hist_arr += [hist]
+
+    return np.asarray(hist_arr), bin_edges
 
 
 def get_sep_hist(h5_data, nbins=100, ss_ind=0, write=False):
