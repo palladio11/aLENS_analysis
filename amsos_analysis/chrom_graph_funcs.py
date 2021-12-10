@@ -19,6 +19,7 @@ import numpy as np
 from scipy.special import erf
 from scipy.integrate import quad
 import scipy.stats as stats
+from scipy.signal import savgol_filter
 
 # Visualization
 import matplotlib as mpl
@@ -35,7 +36,98 @@ import matplotlib.colors as colors
 from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              get_all_rog_stats, cart_distr_hists,
                              cylin_distr_hists, rad_distr_hists,
-                             calc_rad_of_gyration, get_contact_kymo_data)
+                             calc_rad_of_gyration, get_contact_kymo_data,
+                             get_pos_kymo_data, get_pos_cond_data,
+                             get_sep_dist_mat, get_time_avg_contact_mat,
+                             get_link_tension, gauss_weighted_contact,
+                             get_contact_cond_data,
+                             )
+
+
+def make_all_condensate_graphs(h5_data, opts):
+    """TODO: Docstring for make_all_condensate_graphs.
+
+    @param h5_path TODO
+    @param **kwargs TODO
+    @return: TODO
+
+    """
+    cond_sty = {
+        "axes.titlesize": 20,
+        "axes.labelsize": 24,
+        "lines.linewidth": 2,
+        "lines.markersize": 2,
+        "xtick.labelsize": 24,
+        "ytick.labelsize": 24,
+        "font.size": 20,
+        "font.sans-serif": 'Helvetica',
+        "text.usetex": False,
+        'mathtext.fontset': 'cm',
+    }
+    plt.style.use(cond_sty)
+
+    ss_ind = 600
+    end_ind = -1
+    start_bead = 0
+    end_bead = -1
+
+    # Make position kymo graph
+    time_arr, cond_hist_arr, bin_edges = get_pos_kymo_data(
+        h5_data, ts_range=(ss_ind, end_ind), bins=200)
+    bin_centers = .5 * (bin_edges[:-1] + bin_edges[1:])
+
+    fig1, axarr1 = plt.subplots(1, 2, figsize=(20, 8))
+    plot_pos_kymo(fig1, axarr1[0], time_arr, cond_hist_arr, bin_edges)
+
+    cond_edge_coords, cond_num_arr = get_pos_cond_data(
+        time_arr, cond_hist_arr, bin_centers, 10, bin_win=0, time_win=1001)
+
+    plot_condensate_kymo(axarr1[1], cond_edge_coords)
+    axarr1[1].set_ylim(bin_centers[0], bin_centers[-1])
+
+    fig1.savefig(opts.analysis_dir / f'pos_kymo.png')
+
+    # Make average hic plot
+    sy_dat = h5_data['raw_data']['sylinders'][start_bead:end_bead,
+                                              :, ss_ind:end_ind]
+    com_arr = .5 * (sy_dat[:, 2:5, :] + sy_dat[:, 5:8, :])
+    nbeads = com_arr.shape[0]
+    log_contact_avg_mat = get_time_avg_contact_mat(com_arr, avg_block_step=1)
+
+    fig2, ax2 = make_hic_plot(com_arr, log_contact_avg_mat, vmin=-7)
+    fig2.savefig(opts.analysis_dir / f'average_log_contatct.png')
+
+    # Make contact kymographs
+    sep_dist_mat = get_sep_dist_mat(h5_data, ss_ind, bead_range=[
+        start_bead, end_bead])
+    contact_mat = gauss_weighted_contact(sep_dist_mat)
+    fig3, axarr3, contact_kymo = make_summed_contact_kymo_graph(
+        contact_mat[:, :, :end_ind], time_arr, vmin=-25, vmax=7)
+    fig3.savefig(opts.analysis_dir / f'contact_kymo.png')
+
+    # Make tension kymograph
+    fig4, ax4 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
+    fig4.savefig(opts.analysis_dir / f'tension_kymo.png')
+
+    # Make contact condensate number and width graphs
+
+    pass
+
+
+def make_contact_condensate_characterize_graphs(
+        contact_kymo, time_arr, threshold, bead_win, time_win):
+    """TODO: Docstring for make_contact_condensate_characterize_graphs.
+
+    @param contact_kymo TODO
+    @param time_arr TODO
+    @return: TODO
+
+    """
+    fig, axarr = plt.subplots(1, 3, figsize=(30, 8))
+    cond_edge_coords, cond_num_arr = get_contact_cond_data(
+        time_arr, contact_kymo, threshold, bead_win, time_win)
+
+    return fig, axarr
 
 
 def make_total_distr_plots(com_arr, log_contact_avg=None, hist_max=1.,
@@ -248,6 +340,36 @@ def make_summed_contact_kymo_graph(
     fig.tight_layout()
 
     return fig, axarr, contact_kymo
+
+
+def make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001):
+    """TODO: Docstring for make_tension_kymo.
+
+    @param h5_data TODO
+    @return: TODO
+
+    """
+    time_arr = h5_data['time'][ss_ind:end_ind]
+    tension_arr = get_link_tension(h5_data)[:, ss_ind:end_ind]
+    tension_arr = savgol_filter(tension_arr, time_win, 3, axis=-1)
+    fig, ax = plt.subplots(figsize=(10, 8), )
+    x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
+    y = np.arange(tension_arr.shape[0] + 1)
+    X, Y = np.meshgrid(x, y)
+    c0 = ax.pcolorfast(X, Y, tension_arr)
+    _ = fig.colorbar(c0, ax=ax, label=r"Tension (pN)")
+    return fig, ax
+
+
+# def make_pos_kymo_graph(h5_data, pos_hist_kymo, vmax=60):
+#     """TODO: Docstring for make_pos_kymo_graph.
+#     @return: TODO
+
+#     """
+#     time_arr, cond_hist_arr, bin_edges = get_pos_kymo_data(
+#         h5_data, ts_range=(ss_ind, end_ind), bins=200)
+#     bin_centers = .5 * (bin_edges[:-1] + bin_edges[1:])
+#     pass
 
 
 def make_rog_vs_time_graph(time_arr, com_arr, label=None):

@@ -101,7 +101,7 @@ def get_contact_kymo_data(contact_mat):
 
     """
     # Remove interaction with self and divide by 2 to not double count contacts
-    return (np.sum(contact_mat, axis=0) - 1) * .5
+    return (np.sum(contact_mat, axis=0) - 1)
 
 
 def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100):

@@ -14,6 +14,7 @@ import h5py
 import yaml
 import time
 import re
+import numpy as np
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -22,6 +23,12 @@ from .read_func import convert_dat_to_hdf
 from .hic_animation import hic_animation
 from .min_animation import min_animation
 from .colormaps import register_cmaps
+from .chrom_analysis import get_pos_kymo_data, get_pos_cond_data
+from .chrom_graph_funcs import make_all_condensate_graphs
+
+MOVIE_DICT = {'hic': hic_animation,
+              'min': min_animation,
+              }
 
 
 def parse_args():
@@ -57,8 +64,9 @@ def parse_args():
                         help=("Create an animation from a seed. "
                               "hic: movie with instantaneous Hi-C map"
                               "min: images only"))
-    parser.add_argument("-G", "--graph", action="store_true", default=False,
-                        help=("Create graph of a seed's end state."))
+    parser.add_argument("-G", "--graph", choices=[None, "condense"], default=False,
+                        help=("Create graph of a seed's end state. "
+                              "condense: graphs related to condensates"))
 
     parser.add_argument("-cm", "--colormap", default=None,
                         help=("Specify a colormap to use in graphs"))
@@ -84,6 +92,7 @@ def parse_args():
     # Post parsing changes to options
     opts.path = Path(opts.path).resolve()
     opts.data_dir = opts.path / 'result'
+    opts.analysis_dir = opts.data_dir / 'analysis'
     print(opts.path)
 
     return opts
@@ -116,6 +125,20 @@ def get_walltime(log_path):
     return end_dt - start_dt
 
 
+def make_graphs(opts):
+    """TODO: Docstring for make_graphs.
+
+    @param opts TODO
+    @return: TODO
+
+    """
+    h5_path = opts.path / f'{opts.path.stem}.h5'
+    opts.analysis_dir.mkdir(exist_ok=True)
+
+    with h5py.File(h5_path, 'r+') as h5_data:
+        make_all_condensate_graphs(h5_data, opts)
+
+
 def main():
     """!Main function for AMSOS analysis controller
 
@@ -142,14 +165,14 @@ def main():
                 h5_data.attrs['total_seconds'] = dwtime.total_seconds()
                 h5_data.attrs['walltime'] = str(dwtime)
 
-    if opts.movie == "hic":
-        hic_animation(opts)
+    if opts.movie:
+        MOVIE_DICT(opts.movie)(opts)
         return
-    if opts.movie == "min":
-        min_animation(opts)
+
+    if opts.graph:
+        make_graphs(opts)
 
     # if opts.graph:
-        # make_graphs(opts)
     try:
         h5_data.flush()
         h5_data.close()
