@@ -44,7 +44,7 @@ from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              )
 
 
-def make_all_condensate_graphs(h5_data, opts):
+def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     """TODO: Docstring for make_all_condensate_graphs.
 
     @param h5_path TODO
@@ -66,22 +66,45 @@ def make_all_condensate_graphs(h5_data, opts):
     }
     plt.style.use(cond_sty)
 
+    if overwrite and 'analysis' in h5_data.keys():
+        del h5_data['analysis']
+    analysis_grp = h5_data.require_group('analysis')
+
     # Start and end of data arrays
     ss_ind = 600
     end_ind = -1
     start_bead = 0
     end_bead = -1
 
+    # Basic data
+    sy_dat = h5_data['raw_data']['sylinders'][start_bead:end_bead,
+                                              :, ss_ind:end_ind]
+    com_arr = .5 * (sy_dat[:, 2:5, :] + sy_dat[:, 5:8, :])
+    nbeads = com_arr.shape[0]
+
     # Make position kymo graph
     fig1, axarr1 = plt.subplots(1, 2, figsize=(20, 8))
 
-    time_arr, cond_hist_arr, bin_edges = get_pos_kymo_data(
-        h5_data, ts_range=(ss_ind, end_ind), bins=200)
+    if 'pos_kymo' not in analysis_grp.keys():
+        time_arr, cond_hist_arr, bin_edges = get_pos_kymo_data(
+            h5_data, ts_range=(ss_ind, end_ind),
+            bead_range=(start_bead, end_bead),
+            bins=200,
+            analysis=analysis_grp)
+    else:
+        time_arr = h5_data['time'][ss_ind:end_ind]
+        cond_hist_arr = analysis_grp['pos_kymo'][...]
+        bin_edges = analysis_grp['pos_kymo_bin_edges'][...]
+
     bin_centers = .5 * (bin_edges[:-1] + bin_edges[1:])
     plot_pos_kymo(fig1, axarr1[0], time_arr, cond_hist_arr, bin_edges)
 
-    pos_cond_edge_coords, pos_cond_num_arr = get_pos_cond_data(
-        time_arr, cond_hist_arr, bin_centers, 10, bin_win=0, time_win=1001)
+    if 'pos_cond_edges' not in analysis_grp:
+        pos_cond_edge_coords, pos_cond_num_arr = get_pos_cond_data(
+            time_arr, cond_hist_arr, bin_centers, 10, bin_win=0, time_win=1001, analysis=analysis_grp)
+    else:
+        pos_cond_edge_coords = analysis_grp['pos_cond_edges'][...]
+        pos_cond_num_arr = analysis_grp['pos_cond_num'][...]
 
     plot_condensate_kymo(axarr1[1], pos_cond_edge_coords)
     axarr1[1].set_ylim(bin_centers[0], bin_centers[-1])
@@ -90,38 +113,38 @@ def make_all_condensate_graphs(h5_data, opts):
     # register_cmaps()
     plt.rcParams['image.cmap'] = 'YlOrRd'
     # Make average hic plot
-    sy_dat = h5_data['raw_data']['sylinders'][start_bead:end_bead,
-                                              :, ss_ind:end_ind]
-    com_arr = .5 * (sy_dat[:, 2:5, :] + sy_dat[:, 5:8, :])
-    nbeads = com_arr.shape[0]
-    log_contact_avg_mat = get_time_avg_contact_mat(com_arr, avg_block_step=1)
+    if 'log_contact_avg_mat' not in analysis_grp:
+        log_contact_avg_mat = get_time_avg_contact_mat(
+            com_arr, avg_block_step=1, analysis=analysis_grp)
+    else:
+        log_contact_avg_mat = analysis_grp['log_contact_avg_mat'][...]
 
     fig2, ax2 = make_hic_plot(com_arr, log_contact_avg_mat, vmin=-7)
     fig2.savefig(opts.analysis_dir / f'average_log_contatct.png')
 
     # Make contact kymographs
-    sep_dist_mat = get_sep_dist_mat(h5_data, ss_ind, bead_range=[
-        start_bead, end_bead])
-    contact_mat = gauss_weighted_contact(sep_dist_mat)
-    fig3, axarr3, contact_kymo = make_summed_contact_kymo_graph(
-        contact_mat[:, :, :end_ind], time_arr, vmin=-25, vmax=7)
-    fig3.savefig(opts.analysis_dir / f'contact_kymo.png')
-
-    # Make tension kymograph
-    fig4, ax4 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
-    fig4.savefig(opts.analysis_dir / f'tension_kymo.png')
+    # if 'contact_kymo' not in analysis_grp:
+    # sep_dist_mat = get_sep_dist_mat(h5_data, ss_ind, bead_range=[
+    # start_bead, end_bead])
+    # contact_mat = gauss_weighted_contact(sep_dist_mat)
+    # fig3, axarr3, contact_kymo = make_summed_contact_kymo_graph(
+    # contact_mat[:, :, :end_ind], time_arr, vmin=-25, vmax=7)
+    # fig3.savefig(opts.analysis_dir / f'contact_kymo.png')
 
     # Make contact condensate number and max width graphs
-    fig5, axarr5 = plt.subplots(1, 2, figsize=(20, 8))
-    contact_cond_edge_coords, contact_cond_num_arr = get_contact_cond_data(
-        time_arr, contact_kymo, 3.0, bead_win=101, time_win=1001)
-    plot_condensate_kymo(axarr5[0], contact_cond_edge_coords,
-                         ylabel='Bead index')
-    plot_condensate_characterize(axarr5[1], time_arr,
-                                 contact_cond_edge_coords, contact_cond_num_arr)
-    fig5.savefig(opts.analysis_dir / f'contact_cond_charact.png')
+    # fig4, axarr4 = plt.subplots(1, 2, figsize=(20, 8))
+    # contact_cond_edge_coords, contact_cond_num_arr = get_contact_cond_data(
+    # time_arr, contact_kymo, 3.0, bead_win=101, time_win=1001)
+    # plot_condensate_kymo(axarr4[0], contact_cond_edge_coords,
+    # ylabel='Bead index')
+    # plot_condensate_characterize(axarr4[1], time_arr,
+    # contact_cond_edge_coords, contact_cond_num_arr)
+    # fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
 
-    pass
+    plt.rcParams['image.cmap'] = 'coolwarm'
+    # Make tension kymograph
+    fig5, ax5 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
+    fig5.savefig(opts.analysis_dir / f'tension_kymo.png')
 
 
 def make_contact_condensate_characterize_graphs(
@@ -422,7 +445,8 @@ def plot_link_energy_vs_time(ax, h5_data, ss_frac=.75):
     ax.set_xlabel("Time (sec)")
 
 
-def plot_condensate_kymo(ax, edge_coords, axis_label_flag=True, ylabel=''):
+def plot_condensate_kymo(ax, edge_coords, xlims=None,
+                         ylims=None, axis_label_flag=True, ylabel=''):
     """TODO: Docstring for plot_contact_conden_kymo.
 
     @param ax TODO
@@ -430,12 +454,17 @@ def plot_condensate_kymo(ax, edge_coords, axis_label_flag=True, ylabel=''):
     @return: None
 
     """
-    ax.scatter(edge_coords[:, 0], edge_coords[:, 1], label='start')
-    ax.scatter(edge_coords[:, 0], edge_coords[:, 2], label='end')
-    ax.scatter(edge_coords[:, 0], .5 *
-               (edge_coords[:, 2] + edge_coords[:, 1]), label='center')
-    ax.vlines(edge_coords[:, 0], edge_coords[:, 1],
-              edge_coords[:, 2], color='k', alpha=.01)
+    if not xlims is None:
+        ax.set_xlim(xlims[0], xlims[1])
+    if not ylims is None:
+        ax.set_ylim(ylims[0], ylims[1])
+    if len(edge_coords) > 0:
+        ax.scatter(edge_coords[:, 0], edge_coords[:, 1], label='start')
+        ax.scatter(edge_coords[:, 0], edge_coords[:, 2], label='end')
+        ax.scatter(edge_coords[:, 0], .5 *
+                   (edge_coords[:, 2] + edge_coords[:, 1]), label='center')
+        ax.vlines(edge_coords[:, 0], edge_coords[:, 1],
+                  edge_coords[:, 2], color='k', alpha=.01)
     # ax.legend(loc='lower center', bbox_to_anchor=(.5, 1.05))
     if axis_label_flag:
         ax.set_xlabel("Time $t$ (sec)")
@@ -454,7 +483,10 @@ def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
     ax1 = ax0.twinx()
 
     # Find the largest condensate by bead size at each time step
-    cond_widths_arr = edge_coords[:, 2] - edge_coords[:, 1]
+    if len(edge_coords) > 0:
+        cond_widths_arr = edge_coords[:, 2] - edge_coords[:, 1]
+    else:
+        cond_widths_arr = np.asarray([])
     i_ec = 0  # index of edge_coord
     max_width_arr = []
     total_width_arr = []
@@ -485,6 +517,7 @@ def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
     ax1.plot(time_arr, cond_num_arr, color='r')
     ax1.set_ylabel('Condensate number', color='r')
     ax1.tick_params(axis='y', labelcolor='r')
+    plt.tight_layout()
 
 
 def plot_contact_kymo(fig, ax, time_arr, contact_mat,

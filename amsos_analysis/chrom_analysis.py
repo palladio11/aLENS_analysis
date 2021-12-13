@@ -104,7 +104,8 @@ def get_contact_kymo_data(contact_mat):
     return (np.sum(contact_mat, axis=0) - 1)
 
 
-def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100):
+def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100,
+                      analysis=None):
     """Using center of all spheres, return a matrix with rows for n beads in a
     range along the axis of the two stationary end beads and columns for each
     time point in simulation.
@@ -114,7 +115,6 @@ def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100):
     @return: TODO
 
     """
-    time_arr = h5_data['time'][ts_range[0]:ts_range[-1]]
     # Get size of the system
     params = yaml.safe_load(h5_data.attrs['RunConfig'])
     sim_box_low = np.asarray(params['simBoxLow'])
@@ -137,7 +137,25 @@ def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100):
                                        range=(range_min, range_max))
         hist_arr += [hist]
 
-    return time_arr, np.asarray(hist_arr).T, bin_edges
+    hist_arr = np.asarray(hist_arr).T
+
+    time_arr = h5_data['time'][ts_range[0]:ts_range[-1]]
+    if not analysis is None:
+        pos_kymo_dset = analysis.create_dataset('pos_kymo', data=hist_arr)
+        pos_kymo_bin_edges = analysis.create_dataset(
+            'pos_kymo_bin_edges', data=bin_edges)
+        # Metadata for analysis
+        pos_kymo_dset.attrs['bins'] = bins
+        pos_kymo_dset.attrs['range'] = (range_min, range_max)
+        pos_kymo_dset.attrs['timestep_range'] = ts_range
+        pos_kymo_dset.attrs['time_range'] = (time_arr[0], time_arr[-1])
+        pos_kymo_dset.attrs['bead_range'] = bead_range
+        pos_kymo_bin_edges.attrs['bins'] = bins
+        pos_kymo_bin_edges.attrs['range'] = (range_min, range_max)
+        pos_kymo_bin_edges.attrs['timestep_range'] = ts_range
+        pos_kymo_bin_edges.attrs['time_range'] = (time_arr[0], time_arr[-1])
+        pos_kymo_bin_edges.attrs['bead_range'] = bead_range
+    return time_arr, hist_arr, bin_edges
 
 
 def get_contact_cond_data(time_arr, contact_kymo, threshold,
@@ -193,7 +211,7 @@ def smooth_kymo_mat(mat, y_win=0, time_win=0):
 
 
 def get_pos_cond_data(time_arr, pos_kymo, bin_centers, threshold,
-                      bin_win=0, time_win=0):
+                      bin_win=0, time_win=0, analysis=None):
     """TODO: Docstring for get_contact_cond_data.
 
     @param time_arr TODO
@@ -216,6 +234,19 @@ def get_pos_cond_data(time_arr, pos_kymo, bin_centers, threshold,
 
     cond_edge_coords = np.asarray(cond_edge_coords)
     cond_num_arr = np.asarray(cond_num_arr)
+    if not analysis is None:
+        pos_cond_edge_dset = analysis.create_dataset(
+            'pos_cond_edges', data=cond_edge_coords)
+        pos_cond_num_dset = analysis.create_dataset(
+            'pos_cond_num', data=cond_num_arr)
+        pos_cond_edge_dset.attrs['time_range'] = (time_arr[0], time_arr[-1])
+        pos_cond_edge_dset.attrs['threshold'] = threshold
+        pos_cond_edge_dset.attrs['bin_win'] = bin_win
+        pos_cond_edge_dset.attrs['time_win'] = time_win
+        pos_cond_num_dset.attrs['time_range'] = (time_arr[0], time_arr[-1])
+        pos_cond_num_dset.attrs['threshold'] = threshold
+        pos_cond_num_dset.attrs['bin_win'] = bin_win
+        pos_cond_num_dset.attrs['time_win'] = time_win
     return cond_edge_coords, cond_num_arr
 
 
@@ -433,15 +464,26 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
 
 
 def get_time_avg_contact_mat(
-        com_arr, sigma=.02, avg_block_step=1, log=True, radius_arr=None):
+        com_arr, sigma=.02, avg_block_step=1, log=True, radius_arr=None, analysis=None):
     reduc_com_arr = com_arr[::avg_block_step, :, :]  # simple downsampling
     sep_mat = np.linalg.norm(
         reduc_com_arr[:, np.newaxis, :, :] - reduc_com_arr[np.newaxis, :, :, :], axis=2)
     # log_contact_map = log_gauss_weighted_contact(sep_mat, sigma)
     contact_map = gauss_weighted_contact(sep_mat, sigma, radius_arr)
+
     if log:
-        return np.log(contact_map.mean(axis=-1))
-    return contact_map.mean(axis=-1)
+        avg_contact_mat = np.log(contact_map.mean(axis=-1))
+    else:
+        avg_contact_mat = contact_map.mean(axis=-1)
+
+    if not analysis is None:
+        avg_contact_mat_dset = analysis.create_dataset('avg_contact_mat',
+                                                       data=avg_contact_mat)
+        avg_contact_mat_dset.attrs['sigma'] = sigma
+        avg_contact_mat_dset.attrs['avg_block_step'] = avg_block_step
+        avg_contact_mat_dset.attrs['log'] = log
+        avg_contact_mat_dset.attrs['radius_arr'] = radius_arr
+    return avg_contact_mat
 
 
 def get_end_end_distance(com_arr):
