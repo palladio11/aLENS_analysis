@@ -34,17 +34,18 @@ from .rouse_mode_analysis import (get_rouse_modes_at_t,
                                   get_rouse_mode_corr,
                                   get_rouse_mode_corr_fast,)
 
-from .chrom_graph_funcs import (plot_link_energy_vs_time,
-                                make_total_distr_plots,
+from .chrom_graph_funcs import (make_total_distr_plots,
                                 make_min_distr_plots,
                                 make_segment_distr_graphs,
                                 make_rog_vs_time_graph,
                                 make_hic_plot,
                                 make_summed_contact_kymo_graph,
+                                plot_link_energy_vs_time,
                                 plot_rog_vs_time_graph,
                                 plot_condensate_kymo,
                                 plot_contact_kymo,
                                 plot_pos_kymo,
+                                plot_condensate_characterize,
                                 )
 
 from .physical_scales import (get_drag_coeff,

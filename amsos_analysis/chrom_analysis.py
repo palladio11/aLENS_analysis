@@ -167,6 +167,8 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
         cond_num_arr += [len(edges_inds)]
         for start, end in edges_inds:
             cond_edge_coords += [[t, start, end]]
+        # if len(edge_inds) == 0:
+            # cond_edge_coords += [[t, 0, 0]]
 
     cond_edge_coords = np.asarray(cond_edge_coords)
     cond_num_arr = np.asarray(cond_num_arr)

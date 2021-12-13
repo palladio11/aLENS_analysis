@@ -66,27 +66,29 @@ def make_all_condensate_graphs(h5_data, opts):
     }
     plt.style.use(cond_sty)
 
+    # Start and end of data arrays
     ss_ind = 600
     end_ind = -1
     start_bead = 0
     end_bead = -1
 
     # Make position kymo graph
+    fig1, axarr1 = plt.subplots(1, 2, figsize=(20, 8))
+
     time_arr, cond_hist_arr, bin_edges = get_pos_kymo_data(
         h5_data, ts_range=(ss_ind, end_ind), bins=200)
     bin_centers = .5 * (bin_edges[:-1] + bin_edges[1:])
-
-    fig1, axarr1 = plt.subplots(1, 2, figsize=(20, 8))
     plot_pos_kymo(fig1, axarr1[0], time_arr, cond_hist_arr, bin_edges)
 
-    cond_edge_coords, cond_num_arr = get_pos_cond_data(
+    pos_cond_edge_coords, pos_cond_num_arr = get_pos_cond_data(
         time_arr, cond_hist_arr, bin_centers, 10, bin_win=0, time_win=1001)
 
-    plot_condensate_kymo(axarr1[1], cond_edge_coords)
+    plot_condensate_kymo(axarr1[1], pos_cond_edge_coords)
     axarr1[1].set_ylim(bin_centers[0], bin_centers[-1])
-
     fig1.savefig(opts.analysis_dir / f'pos_kymo.png')
 
+    # register_cmaps()
+    plt.rcParams['image.cmap'] = 'YlOrRd'
     # Make average hic plot
     sy_dat = h5_data['raw_data']['sylinders'][start_bead:end_bead,
                                               :, ss_ind:end_ind]
@@ -109,7 +111,15 @@ def make_all_condensate_graphs(h5_data, opts):
     fig4, ax4 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
     fig4.savefig(opts.analysis_dir / f'tension_kymo.png')
 
-    # Make contact condensate number and width graphs
+    # Make contact condensate number and max width graphs
+    fig5, axarr5 = plt.subplots(1, 2, figsize=(20, 8))
+    contact_cond_edge_coords, contact_cond_num_arr = get_contact_cond_data(
+        time_arr, contact_kymo, 3.0, bead_win=101, time_win=1001)
+    plot_condensate_kymo(axarr5[0], contact_cond_edge_coords,
+                         ylabel='Bead index')
+    plot_condensate_characterize(axarr5[1], time_arr,
+                                 contact_cond_edge_coords, contact_cond_num_arr)
+    fig5.savefig(opts.analysis_dir / f'contact_cond_charact.png')
 
     pass
 
@@ -123,9 +133,10 @@ def make_contact_condensate_characterize_graphs(
     @return: TODO
 
     """
-    fig, axarr = plt.subplots(1, 3, figsize=(30, 8))
+    fig, axarr = plt.subplots(1, 3, figsize=(20, 8))
     cond_edge_coords, cond_num_arr = get_contact_cond_data(
         time_arr, contact_kymo, threshold, bead_win, time_win)
+    plot_condensate_kymo(axarr[0], cond_edge_coords, ylabel='Beads')
 
     return fig, axarr
 
@@ -429,6 +440,51 @@ def plot_condensate_kymo(ax, edge_coords, axis_label_flag=True, ylabel=''):
     if axis_label_flag:
         ax.set_xlabel("Time $t$ (sec)")
         ax.set_ylabel(ylabel)
+
+
+def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
+    """TODO: Docstring for plot_condensate_characterize.
+
+    @param ax TODO
+    @param edge_coords TODO
+    @param cond_num_arr TODO
+    @return: TODO
+
+    """
+    ax1 = ax0.twinx()
+
+    # Find the largest condensate by bead size at each time step
+    cond_widths_arr = edge_coords[:, 2] - edge_coords[:, 1]
+    i_ec = 0  # index of edge_coord
+    max_width_arr = []
+    total_width_arr = []
+    for i, t in np.ndenumerate(time_arr):
+        max_width_arr += [0]
+        total_width_arr += [0]
+        # If the number of condensates at time step is zero, leave max width 0
+        if cond_num_arr[i] == 0:
+            continue
+        # Iteratively check which is the largest condensate at a time step
+        while edge_coords[i_ec, 0] < t and i_ec < cond_widths_arr.size:
+            max_width_arr[-1] = max(max_width_arr[-1], cond_widths_arr[i_ec])
+            total_width_arr[-1] += cond_widths_arr[i_ec]
+            i_ec += 1
+
+    ax0.set_xlabel('Time (sec)')
+
+    ax0.plot(time_arr, total_width_arr, color='b', label='Total')
+    ax0.plot(time_arr,
+             max_width_arr,
+             color='b',
+             linestyle='--',
+             label='Largest')
+    ax0.set_ylabel('Bead number', color='b')
+    ax0.tick_params(axis='y', labelcolor='b')
+    ax0.legend()
+
+    ax1.plot(time_arr, cond_num_arr, color='r')
+    ax1.set_ylabel('Condensate number', color='r')
+    ax1.tick_params(axis='y', labelcolor='r')
 
 
 def plot_contact_kymo(fig, ax, time_arr, contact_mat,

@@ -166,7 +166,7 @@ def main():
                 h5_data.attrs['walltime'] = str(dwtime)
 
     if opts.movie:
-        MOVIE_DICT(opts.movie)(opts)
+        MOVIE_DICT[opts.movie](opts)
         return
 
     if opts.graph:
