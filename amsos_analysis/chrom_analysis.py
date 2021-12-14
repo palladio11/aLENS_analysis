@@ -93,7 +93,7 @@ def get_link_tension(h5_data, write=False):
 
 
 def get_contact_kymo_data(contact_mat):
-    """Using a contact map, return a matrix with rows for the total contact
+    """Using a contact matrix, return a matrix with rows for the total contact
     probability of each bead and columns for each time point in simulation.
 
     @param contact_mat nbead x nbead x time points matrix of contact probabilities
@@ -140,7 +140,7 @@ def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100,
     hist_arr = np.asarray(hist_arr).T
 
     time_arr = h5_data['time'][ts_range[0]:ts_range[-1]]
-    if not analysis is None:
+    if analysis is not None:
         pos_kymo_dset = analysis.create_dataset('pos_kymo', data=hist_arr)
         pos_kymo_bin_edges = analysis.create_dataset(
             'pos_kymo_bin_edges', data=bin_edges)
@@ -184,7 +184,7 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
 
     cond_edge_coords = np.asarray(cond_edge_coords)
     cond_num_arr = np.asarray(cond_num_arr)
-    if not analysis is None:
+    if analysis is not None:
         cond_edges_dset = analysis.create_dataset('contact_cond_edges',
                                                   data=cond_edge_coords)
         cond_num_dset = analysis.create_dataset('contact_cond_num',
@@ -240,7 +240,7 @@ def get_pos_cond_data(time_arr, pos_kymo, bin_centers, threshold,
 
     cond_edge_coords = np.asarray(cond_edge_coords)
     cond_num_arr = np.asarray(cond_num_arr)
-    if not analysis is None:
+    if analysis is not None:
         pos_cond_edge_dset = analysis.create_dataset(
             'pos_cond_edges', data=cond_edge_coords)
         pos_cond_num_dset = analysis.create_dataset(
@@ -469,27 +469,36 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
     return(pos_avg_arr, pos_std_arr, rad_mean_arr, rad_std_arr)
 
 
-def get_time_avg_contact_mat(
+def get_contact_mat_analysis(
         com_arr, sigma=.02, avg_block_step=1, log=True, radius_arr=None, analysis=None):
     reduc_com_arr = com_arr[::avg_block_step, :, :]  # simple downsampling
     sep_mat = np.linalg.norm(
         reduc_com_arr[:, np.newaxis, :, :] - reduc_com_arr[np.newaxis, :, :, :], axis=2)
-    # log_contact_map = log_gauss_weighted_contact(sep_mat, sigma)
-    contact_map = gauss_weighted_contact(sep_mat, sigma, radius_arr)
+    # log_contact_mat = log_gauss_weighted_contact(sep_mat, sigma)
+    contact_mat = gauss_weighted_contact(sep_mat, sigma, radius_arr)
+    contact_kymo = get_contact_kymo_data(contact_mat)
 
     if log:
-        avg_contact_mat = np.log(contact_map.mean(axis=-1))
+        avg_contact_mat = np.log(contact_mat.mean(axis=-1))
     else:
-        avg_contact_mat = contact_map.mean(axis=-1)
+        avg_contact_mat = contact_mat.mean(axis=-1)
 
-    if not analysis is None:
+    if analysis is not None:
         avg_contact_mat_dset = analysis.create_dataset('avg_contact_mat',
                                                        data=avg_contact_mat)
         avg_contact_mat_dset.attrs['sigma'] = sigma
         avg_contact_mat_dset.attrs['avg_block_step'] = avg_block_step
         avg_contact_mat_dset.attrs['log'] = log
-        avg_contact_mat_dset.attrs['radius_arr'] = radius_arr
-    return avg_contact_mat, contact_map
+
+        contact_kymo = analysis.create_dataset('contact_kymo',
+                                               data=contact_kymo)
+        contact_kymo.attrs['sigma'] = sigma
+        contact_kymo.attrs['avg_block_step'] = avg_block_step
+        # contact_kymo.attrs['log'] = log
+        if radius_arr is not None:
+            avg_contact_mat_dset.attrs['radius_arr'] = radius_arr
+            contact_kymo.attrs['radius_arr'] = radius_arr
+    return avg_contact_mat, contact_mat, contact_kymo
 
 
 def get_end_end_distance(com_arr):

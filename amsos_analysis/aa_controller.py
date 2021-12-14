@@ -59,7 +59,7 @@ def parse_args():
                         default=None,
                         help=" Specify analysis type to determine if data will"
                         " be overwritten. Options include "
-                        "(overwrite, analyze(default), or load.")
+                        "(overwrite, None(default), or load.")
     parser.add_argument("-M", "--movie", choices=[None, "hic", "min"], default=None,
                         help=("Create an animation from a seed. "
                               "hic: movie with instantaneous Hi-C map"
@@ -136,7 +136,7 @@ def make_graphs(opts):
     opts.analysis_dir.mkdir(exist_ok=True)
 
     with h5py.File(h5_path, 'r+') as h5_data:
-        make_all_condensate_graphs(h5_data, opts)
+        make_all_condensate_graphs(h5_data, opts, opts.analysis)
 
 
 def main():
@@ -170,7 +170,9 @@ def main():
         return
 
     if opts.graph:
+        t0 = time.time()
         make_graphs(opts)
+        print(f" Graphs created in {time.time() - t0}")
 
     # if opts.graph:
     try:

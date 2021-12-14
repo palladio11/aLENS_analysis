@@ -38,7 +38,7 @@ from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              cylin_distr_hists, rad_distr_hists,
                              calc_rad_of_gyration, get_contact_kymo_data,
                              get_pos_kymo_data, get_pos_cond_data,
-                             get_sep_dist_mat, get_time_avg_contact_mat,
+                             get_sep_dist_mat, get_contact_mat_analysis,
                              get_link_tension, gauss_weighted_contact,
                              get_contact_cond_data,
                              )
@@ -114,42 +114,44 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     plt.rcParams['image.cmap'] = 'YlOrRd'
 
     # Make average hic plot
-    contact_map = None
-    if 'log_contact_avg_mat' not in analysis_grp:
-        log_contact_avg_mat, contact_map = get_time_avg_contact_mat(
+    contact_mat = None
+    if 'avg_contact_mat' not in analysis_grp:
+        log_avg_contact_mat, contact_mat, contact_kymo = get_contact_mat_analysis(
             com_arr, avg_block_step=1, analysis=analysis_grp)
     else:
-        log_contact_avg_mat = analysis_grp['log_contact_avg_mat'][...]
+        log_avg_contact_mat = analysis_grp['avg_contact_mat'][...]
 
-    fig2, ax2 = make_hic_plot(com_arr, log_contact_avg_mat, vmin=-7)
+    fig2, ax2 = make_hic_plot(com_arr, log_avg_contact_mat, vmin=-7)
     fig2.savefig(opts.analysis_dir / f'average_log_contatct.png')
 
     # Make contact kymograph and last image
     fig4, axarr4 = plt.subplots(1, 3, figsize=(22, 6))
     if 'contact_kymo' not in analysis_grp:
-        if contact_map is None:
-            log_contact_avg_mat, contact_mat = get_time_avg_contact_mat(
-                com_arr, avg_block_step=1, analysis=analysis_grp)
-        contact_kymo = get_contact_kymo_data(contact_mat)
+        if contact_mat is None:
+            log_avg_contact_mat, contact_mat, contact_kymo = get_contact_mat_analysis(
+                com_arr, avg_block_step=1)
     else:
         contact_kymo = analysis_grp['contact_kymo'][...]
-    if not contact_map is None:
+    # TODO better handling of this
+    if contact_mat is not None:
         fig3, axarr3 = make_summed_contact_kymo_graph(
             contact_mat, time_arr, contact_type="", vmin=-25, vmax=7,
-            avg_contact_map=log_contact_avg_mat, avg_vmin=-7)
+            avg_contact_mat=log_avg_contact_mat, avg_vmin=-7)
 
     plot_contact_kymo(fig4, axarr4[0], time_arr, contact_kymo, vmax=7)
 
     # Make contact condensate analysis
     if 'contact_cond_edges' not in analysis_grp:
         contact_cond_edges, contact_cond_num = get_contact_cond_data(
-            time_arr, contact_kymo, 3.0, bead_win=101, time_win=1001,
+            time_arr, contact_kymo, 3.5, bead_win=101, time_win=1001,
             analysis=analysis_grp)
     else:
         contact_cond_edges = analysis_grp['contact_cond_edges'][...]
         contact_cond_num = analysis_grp['contact_cond_num'][...]
 
-    plot_condensate_kymo(axarr4[1], contact_cond_edges, ylabel='Bead index')
+    plot_condensate_kymo(axarr4[1], contact_cond_edges,
+                         ylims=[start_bead, nbeads],
+                         ylabel='Bead index')
     plot_condensate_characterize(axarr4[2], time_arr,
                                  contact_cond_edges, contact_cond_num)
     fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
@@ -336,18 +338,19 @@ def make_segment_distr_graphs(
 def make_summed_contact_kymo_graph(contact_mat,
                                    time_arr, contact_type="",
                                    vmin=-25, vmax=10,
-                                   avg_contact_map=None, avg_vmin=-7):
+                                   avg_contact_mat=None, avg_vmin=-7):
 
+    plt.rcParams['image.cmap'] = 'YlOrRd'
     nbeads = contact_mat.shape[0]
-    if isinstance(avg_contact_map, np.ndarray):
+    if isinstance(avg_contact_mat, np.ndarray):
         fig, axarr = plt.subplots(1, 3, figsize=(22, 6))
-        x = np.arange(nbeads + 1)[::int((nbeads) / avg_contact_map.shape[0])]
+        x = np.arange(nbeads + 1)[::int((nbeads) / avg_contact_mat.shape[0])]
         X, Y = np.meshgrid(x, x)
-        c = axarr[2].pcolorfast(X, Y, avg_contact_map, vmin=avg_vmin)
+        c = axarr[2].pcolorfast(X, Y, avg_contact_mat, vmin=avg_vmin)
         axarr[2].set_aspect('equal')
         _ = fig.colorbar(c, ax=axarr[2], label="Log contact probability")
 
-        _ = axarr[2].set_title('Time average contact map')
+        _ = axarr[2].set_title('Time average contact matrix')
         _ = axarr[2].set_xlabel("Bead index")
         _ = axarr[2].set_ylabel("Bead index")
     else:
@@ -363,7 +366,7 @@ def make_summed_contact_kymo_graph(contact_mat,
     _ = axarr[0].set_xlabel(r'Bead index')
     _ = axarr[0].set_ylabel(r'Bead index')
     _ = axarr[0].set_title(
-        'Last frame contact map \n 1 bead $\sim$ 200-400 bp')
+        'Last frame contact mat \n 1 bead $\sim$ 200-400 bp')
 
     # Contact kymograph
     contact_kymo = get_contact_kymo_data(contact_mat)
@@ -391,7 +394,7 @@ def make_summed_contact_kymo_graph(contact_mat,
 
     fig.tight_layout()
 
-    return fig, axarr, contact_kymo
+    return fig, axarr
 
 
 def make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001):
@@ -472,9 +475,9 @@ def plot_condensate_kymo(ax, edge_coords, xlims=None,
     @return: None
 
     """
-    if not xlims is None:
+    if xlims is not None:
         ax.set_xlim(xlims[0], xlims[1])
-    if not ylims is None:
+    if ylims is not None:
         ax.set_ylim(ylims[0], ylims[1])
     if len(edge_coords) > 0:
         ax.scatter(edge_coords[:, 0], edge_coords[:, 1], label='start')
@@ -520,7 +523,7 @@ def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
             total_width_arr[-1] += cond_widths_arr[i_ec]
             i_ec += 1
 
-    ax0.set_xlabel('Time (sec)')
+    ax0.set_xlabel('Time $t$ (sec)')
 
     ax0.plot(time_arr, total_width_arr, color='b', label='Total')
     ax0.plot(time_arr,
@@ -531,9 +534,11 @@ def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
     ax0.set_ylabel('Bead number', color='b')
     ax0.tick_params(axis='y', labelcolor='b')
     ax0.legend()
+    ax0.set_ylim(0)
 
     ax1.plot(time_arr, cond_num_arr, color='r')
     ax1.set_ylabel('Condensate number', color='r')
+    ax1.set_ylim(0)
     ax1.tick_params(axis='y', labelcolor='r')
     plt.tight_layout()
 
