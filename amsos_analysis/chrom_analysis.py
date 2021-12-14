@@ -159,7 +159,7 @@ def get_pos_kymo_data(h5_data, ts_range=(0, -1), bead_range=(0, -1), bins=100,
 
 
 def get_contact_cond_data(time_arr, contact_kymo, threshold,
-                          bead_win=0, time_win=0):
+                          bead_win=0, time_win=0, analysis=None):
     """TODO: Docstring for get_contact_cond_data.
 
     @param time_arr TODO
@@ -172,12 +172,6 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
     """
     # Doesn't matter which smoothing occurs first
     smooth_contact_kymo = smooth_kymo_mat(contact_kymo, bead_win, time_win)
-    smooth_contact_kymo = deepcopy(contact_kymo)
-    if bead_win > 0:
-        smooth_contact_kymo = savgol_filter(contact_kymo, bead_win, 3, axis=0)
-    if time_win > 0:
-        smooth_contact_kymo = savgol_filter(smooth_contact_kymo,
-                                            time_win, 3, axis=-1)
     cond_edge_coords = []
     cond_num_arr = []
     for i, t in enumerate(time_arr):
@@ -190,6 +184,18 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
 
     cond_edge_coords = np.asarray(cond_edge_coords)
     cond_num_arr = np.asarray(cond_num_arr)
+    if not analysis is None:
+        cond_edges_dset = analysis.create_dataset('contact_cond_edges',
+                                                  data=cond_edge_coords)
+        cond_num_dset = analysis.create_dataset('contact_cond_num',
+                                                data=cond_num_arr)
+        # Metadata for analysis
+        cond_edges_dset.attrs['threshold'] = threshold
+        cond_edges_dset.attrs['bead_win'] = bead_win
+        cond_edges_dset.attrs['times_win'] = time_win
+        cond_num_dset.attrs['threshold'] = threshold
+        cond_num_dset.attrs['bead_win'] = bead_win
+        cond_num_dset.attrs['times_win'] = time_win
     return cond_edge_coords, cond_num_arr
 
 
@@ -483,7 +489,7 @@ def get_time_avg_contact_mat(
         avg_contact_mat_dset.attrs['avg_block_step'] = avg_block_step
         avg_contact_mat_dset.attrs['log'] = log
         avg_contact_mat_dset.attrs['radius_arr'] = radius_arr
-    return avg_contact_mat
+    return avg_contact_mat, contact_map
 
 
 def get_end_end_distance(com_arr):

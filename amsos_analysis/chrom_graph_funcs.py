@@ -82,7 +82,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     com_arr = .5 * (sy_dat[:, 2:5, :] + sy_dat[:, 5:8, :])
     nbeads = com_arr.shape[0]
 
-    # Make position kymo graph
+    # Make combined position kymo graph and condensate graph
     fig1, axarr1 = plt.subplots(1, 2, figsize=(20, 8))
 
     if 'pos_kymo' not in analysis_grp.keys():
@@ -95,26 +95,28 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
         time_arr = h5_data['time'][ss_ind:end_ind]
         cond_hist_arr = analysis_grp['pos_kymo'][...]
         bin_edges = analysis_grp['pos_kymo_bin_edges'][...]
-
     bin_centers = .5 * (bin_edges[:-1] + bin_edges[1:])
     plot_pos_kymo(fig1, axarr1[0], time_arr, cond_hist_arr, bin_edges)
 
+    # Make position condensate graph
     if 'pos_cond_edges' not in analysis_grp:
         pos_cond_edge_coords, pos_cond_num_arr = get_pos_cond_data(
             time_arr, cond_hist_arr, bin_centers, 10, bin_win=0, time_win=1001, analysis=analysis_grp)
     else:
         pos_cond_edge_coords = analysis_grp['pos_cond_edges'][...]
         pos_cond_num_arr = analysis_grp['pos_cond_num'][...]
-
     plot_condensate_kymo(axarr1[1], pos_cond_edge_coords)
     axarr1[1].set_ylim(bin_centers[0], bin_centers[-1])
+
     fig1.savefig(opts.analysis_dir / f'pos_kymo.png')
 
     # register_cmaps()
     plt.rcParams['image.cmap'] = 'YlOrRd'
+
     # Make average hic plot
+    contact_map = None
     if 'log_contact_avg_mat' not in analysis_grp:
-        log_contact_avg_mat = get_time_avg_contact_mat(
+        log_contact_avg_mat, contact_map = get_time_avg_contact_mat(
             com_arr, avg_block_step=1, analysis=analysis_grp)
     else:
         log_contact_avg_mat = analysis_grp['log_contact_avg_mat'][...]
@@ -122,24 +124,35 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     fig2, ax2 = make_hic_plot(com_arr, log_contact_avg_mat, vmin=-7)
     fig2.savefig(opts.analysis_dir / f'average_log_contatct.png')
 
-    # Make contact kymographs
-    # if 'contact_kymo' not in analysis_grp:
-    # sep_dist_mat = get_sep_dist_mat(h5_data, ss_ind, bead_range=[
-    # start_bead, end_bead])
-    # contact_mat = gauss_weighted_contact(sep_dist_mat)
-    # fig3, axarr3, contact_kymo = make_summed_contact_kymo_graph(
-    # contact_mat[:, :, :end_ind], time_arr, vmin=-25, vmax=7)
-    # fig3.savefig(opts.analysis_dir / f'contact_kymo.png')
+    # Make contact kymograph and last image
+    fig4, axarr4 = plt.subplots(1, 3, figsize=(22, 6))
+    if 'contact_kymo' not in analysis_grp:
+        if contact_map is None:
+            log_contact_avg_mat, contact_mat = get_time_avg_contact_mat(
+                com_arr, avg_block_step=1, analysis=analysis_grp)
+        contact_kymo = get_contact_kymo_data(contact_mat)
+    else:
+        contact_kymo = analysis_grp['contact_kymo'][...]
+    if not contact_map is None:
+        fig3, axarr3 = make_summed_contact_kymo_graph(
+            contact_mat, time_arr, contact_type="", vmin=-25, vmax=7,
+            avg_contact_map=log_contact_avg_mat, avg_vmin=-7)
 
-    # Make contact condensate number and max width graphs
-    # fig4, axarr4 = plt.subplots(1, 2, figsize=(20, 8))
-    # contact_cond_edge_coords, contact_cond_num_arr = get_contact_cond_data(
-    # time_arr, contact_kymo, 3.0, bead_win=101, time_win=1001)
-    # plot_condensate_kymo(axarr4[0], contact_cond_edge_coords,
-    # ylabel='Bead index')
-    # plot_condensate_characterize(axarr4[1], time_arr,
-    # contact_cond_edge_coords, contact_cond_num_arr)
-    # fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
+    plot_contact_kymo(fig4, axarr4[0], time_arr, contact_kymo, vmax=7)
+
+    # Make contact condensate analysis
+    if 'contact_cond_edges' not in analysis_grp:
+        contact_cond_edges, contact_cond_num = get_contact_cond_data(
+            time_arr, contact_kymo, 3.0, bead_win=101, time_win=1001,
+            analysis=analysis_grp)
+    else:
+        contact_cond_edges = analysis_grp['contact_cond_edges'][...]
+        contact_cond_num = analysis_grp['contact_cond_num'][...]
+
+    plot_condensate_kymo(axarr4[1], contact_cond_edges, ylabel='Bead index')
+    plot_condensate_characterize(axarr4[2], time_arr,
+                                 contact_cond_edges, contact_cond_num)
+    fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
 
     plt.rcParams['image.cmap'] = 'coolwarm'
     # Make tension kymograph
@@ -320,8 +333,10 @@ def make_segment_distr_graphs(
     return fig, axarr
 
 
-def make_summed_contact_kymo_graph(
-        contact_mat, time_arr, contact_type="", vmin=-25, vmax=10, avg_contact_map=None, avg_vmin=-7):
+def make_summed_contact_kymo_graph(contact_mat,
+                                   time_arr, contact_type="",
+                                   vmin=-25, vmax=10,
+                                   avg_contact_map=None, avg_vmin=-7):
 
     nbeads = contact_mat.shape[0]
     if isinstance(avg_contact_map, np.ndarray):
@@ -351,25 +366,28 @@ def make_summed_contact_kymo_graph(
         'Last frame contact map \n 1 bead $\sim$ 200-400 bp')
 
     # Contact kymograph
-    contact_kymo = np.sum(contact_mat, axis=0) - 1
-    y = np.arange(contact_kymo.shape[0] + 1)
-    # Add extra time point
-    x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
-    X, Y = np.meshgrid(x, y)
-    if contact_type == "log":
-        c0 = axarr[1].pcolorfast(X, Y, np.log(contact_kymo))
-        _ = fig.colorbar(
-            c0,
-            ax=axarr[1],
-            label="Log sum contact \n probability")
-    else:
-        c0 = axarr[1].pcolorfast(X, Y, contact_kymo, vmax=vmax)
-        _ = fig.colorbar(c0, ax=axarr[1],
-                         label=r"Contact probability (sec$^{-1}$)")
-    _ = axarr[1].set_title(
-        "Contact probabilty 'kymograph'")
-    axarr[1].set_xlabel("Time $t$ (sec)")
-    axarr[1].set_ylabel("Bead index")
+    contact_kymo = get_contact_kymo_data(contact_mat)
+    plot_contact_kymo(fig, axarr[1], time_arr, contact_kymo,
+                      contact_type=contact_type, vmax=vmax)
+    # contact_kymo = np.sum(contact_mat, axis=0) - 1
+    # y = np.arange(contact_kymo.shape[0] + 1)
+    # # Add extra time point
+    # x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
+    # X, Y = np.meshgrid(x, y)
+    # if contact_type == "log":
+    #     c0 = axarr[1].pcolorfast(X, Y, np.log(contact_kymo))
+    #     _ = fig.colorbar(
+    #         c0,
+    #         ax=axarr[1],
+    #         label="Log sum contact \n probability")
+    # else:
+    #     c0 = axarr[1].pcolorfast(X, Y, contact_kymo, vmax=vmax)
+    #     _ = fig.colorbar(c0, ax=axarr[1],
+    #                      label=r"Contact probability (sec$^{-1}$)")
+    # _ = axarr[1].set_title(
+    #     "Contact probabilty 'kymograph'")
+    # axarr[1].set_xlabel("Time $t$ (sec)")
+    # axarr[1].set_ylabel("Bead index")
 
     fig.tight_layout()
 
@@ -520,7 +538,7 @@ def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
     plt.tight_layout()
 
 
-def plot_contact_kymo(fig, ax, time_arr, contact_mat,
+def plot_contact_kymo(fig, ax, time_arr, contact_kymo,
                       contact_type="", vmax=10):
     """TODO: Docstring for plot_contact_kymo.
 
@@ -529,7 +547,6 @@ def plot_contact_kymo(fig, ax, time_arr, contact_mat,
     @return: TODO
 
     """
-    contact_kymo = get_contact_kymo_data(contact_mat)
     y = np.arange(contact_kymo.shape[0] + 1)
     # Add extra time point
     x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
@@ -543,6 +560,7 @@ def plot_contact_kymo(fig, ax, time_arr, contact_mat,
     _ = ax.set_title("Contact probabilty 'kymograph'")
     ax.set_xlabel("Time $t$ (sec)")
     ax.set_ylabel("Bead index")
+    return
 
 
 def plot_pos_kymo(fig, ax, time_arr, pos_hist_kymo, bin_edges, vmax=60):
