@@ -72,9 +72,9 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
 
     # Start and end of data arrays
     ss_ind = 600
-    end_ind = -1
+    end_ind = None
     start_bead = 0
-    end_bead = -1
+    end_bead = None
 
     # Basic data
     sy_dat = h5_data['raw_data']['sylinders'][start_bead:end_bead,
@@ -125,7 +125,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     fig2.savefig(opts.analysis_dir / f'average_log_contatct.png')
 
     # Make contact kymograph and last image
-    fig4, axarr4 = plt.subplots(1, 3, figsize=(22, 6))
+    fig4, axarr4 = plt.subplots(1, 3, figsize=(24, 6))
     if 'contact_kymo' not in analysis_grp:
         if contact_mat is None:
             log_avg_contact_mat, contact_mat, contact_kymo = get_contact_mat_analysis(
@@ -154,6 +154,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
                          ylabel='Bead index')
     plot_condensate_characterize(axarr4[2], time_arr,
                                  contact_cond_edges, contact_cond_num)
+    fig4.tight_layout()
     fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
 
     plt.rcParams['image.cmap'] = 'coolwarm'
