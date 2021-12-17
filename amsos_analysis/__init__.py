@@ -28,6 +28,7 @@ from .chrom_analysis import (gauss_weighted_contact,
                              get_pos_cond_data,
                              smooth_kymo_mat,
                              get_contact_cond_data,
+                             gen_condensate_track_info,
                              )
 
 from .rouse_mode_analysis import (get_rouse_modes_at_t,

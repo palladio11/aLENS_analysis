@@ -135,8 +135,9 @@ def make_graphs(opts):
     h5_path = opts.path / f'{opts.path.stem}.h5'
     opts.analysis_dir.mkdir(exist_ok=True)
 
-    with h5py.File(h5_path, 'r+') as h5_data:
-        make_all_condensate_graphs(h5_data, opts, opts.analysis)
+    with h5py.File(h5_path, 'a') as h5_data:
+        overwrite = True if opts.analysis == 'overwrite' else False
+        make_all_condensate_graphs(h5_data, opts, overwrite=overwrite)
 
 
 def main():

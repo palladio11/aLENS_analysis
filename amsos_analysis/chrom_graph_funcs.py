@@ -44,7 +44,7 @@ from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              )
 
 
-def make_all_condensate_graphs(h5_data, opts, overwrite=False):
+def madfe_all_condensate_graphs(h5_data, opts, overwrite=False):
     """TODO: Docstring for make_all_condensate_graphs.
 
     @param h5_path TODO
@@ -67,14 +67,16 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     plt.style.use(cond_sty)
 
     if overwrite and 'analysis' in h5_data.keys():
+        print('Deleting analysis')
         del h5_data['analysis']
     analysis_grp = h5_data.require_group('analysis')
 
     # Start and end of data arrays
-    ss_ind = 600
-    end_ind = None
+    ss_ind = 1
+    end_ind = -1
     start_bead = 0
     end_bead = None
+    analysis_grp.attrs['timestep_range'] = [ss_ind, end_ind]
 
     # Basic data
     sy_dat = h5_data['raw_data']['sylinders'][start_bead:end_bead,
@@ -101,7 +103,8 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     # Make position condensate graph
     if 'pos_cond_edges' not in analysis_grp:
         pos_cond_edge_coords, pos_cond_num_arr = get_pos_cond_data(
-            time_arr, cond_hist_arr, bin_centers, 10, bin_win=0, time_win=1001, analysis=analysis_grp)
+            time_arr, cond_hist_arr, bin_centers, 10, bin_win=0,
+            time_win=1001, analysis=analysis_grp)
     else:
         pos_cond_edge_coords = analysis_grp['pos_cond_edges'][...]
         pos_cond_num_arr = analysis_grp['pos_cond_num'][...]
