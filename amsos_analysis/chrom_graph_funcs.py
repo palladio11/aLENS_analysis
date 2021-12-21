@@ -162,7 +162,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
                          ylabel='Bead index')
 
     if 'max_contact_cond_size' not in analysis_grp:
-        max_width_arr, total_width_arr = get_max_and_total_cond_size(
+        max_contact_cond_size, total_contact_cond_beads = get_max_and_total_cond_size(
             time_arr, contact_cond_edges, contact_cond_num,
             analysis=analysis_grp)
     else:
@@ -182,6 +182,9 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
         cond_lst = gen_condensate_track_info(h5_data, cond_grp)
     else:
         cond_lst = extract_condensates(analysis_grp['condensates'])
+    # del analysis_grp['condensates']
+    # cond_grp = analysis_grp.create_group('condensates')
+    cond_lst = gen_condensate_track_info(h5_data, cond_grp)
 
     plot_condensate_kymo(axarr5[0], contact_cond_edges,
                          ylims=[start_bead, nbeads],

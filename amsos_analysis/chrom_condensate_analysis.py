@@ -50,9 +50,10 @@ class Condensate(object):
         @return: TODO
 
         """
-        cond_dset = h5_grp.create_data_set(
-            f'condensate_{self.id}',
-            np.hstack((self.time_arr, self.edge_coord_arr)))
+        combined = np.hstack((np.asarray(self.time_arr)[:, np.newaxis],
+                              np.asarray(self.edge_coord_arr)))
+        cond_dset = h5_grp.create_dataset(f'condensate_{self.id}',
+                                          data=combined)
         cond_dset.attrs['id'] = self.id
         cond_dset.attrs['merged_from'] = self.merged_from
         cond_dset.attrs['split_from'] = self.split_from
@@ -121,11 +122,11 @@ def gen_condensate_track_info(h5_data, analysis=None):
             ids_of_cur_coms_in_new += [[]]
             for cond_id, cond in current_condensates.items():
                 com = cond.get_edge_com(-1)
-                if com > test_edges[-1][1] and com < test_edges[-1][2]:
+                if com >= test_edges[-1][1] and com <= test_edges[-1][2]:
                     # com of condensate is in range of prospective edge
                     ids_of_cur_coms_in_new[-1] += [cond_id]
-                if (edge_com > cond.edge_coord_arr[-1][0]
-                        and edge_com < cond.edge_coord_arr[-1][1]):
+                if (edge_com >= cond.edge_coord_arr[-1][0]
+                        and edge_com <= cond.edge_coord_arr[-1][1]):
                     # com of prospective edge is in range of condensate
                     inds_of_new_coms_in_cur_dict[cond_id] += [te_ind]
             te_ind += 1
