@@ -10,6 +10,13 @@ Description:
 import numpy as np
 
 
+def gen_id():
+    i = 0
+    while True:
+        yield i
+        i += 1
+
+
 def contiguous_regions(condition):
     """By Joe Kington, Finds contiguous True regions of the boolean array
     "condition". Returns a 2D array where the first column is the start
@@ -29,8 +36,8 @@ def contiguous_regions(condition):
         idx = np.r_[0, idx]
 
     if condition[-1]:
-        # if the end of condtion is True, append the length of the array
-        idx = np.r_[idx, condition.size]
+        # if the end of condtion is True, append the last index
+        idx = np.r_[idx, condition.size - 1]
 
     idx.shape = (-1, 2)
     return idx

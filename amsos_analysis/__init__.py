@@ -6,6 +6,11 @@ __author__ = """Adam Reay Lamson"""
 __email__ = 'alamson@flatironinstitute.org'
 __version__ = '0.1.0'
 
+from .chrom_condensate_analysis import (Condensate,
+                                        gen_condensate_track_info,
+                                        get_max_and_total_cond_size,
+                                        )
+
 from .chrom_analysis import (gauss_weighted_contact,
                              log_gauss_weighted_contact,
                              get_link_energy_arrays,
@@ -28,7 +33,6 @@ from .chrom_analysis import (gauss_weighted_contact,
                              get_pos_cond_data,
                              smooth_kymo_mat,
                              get_contact_cond_data,
-                             gen_condensate_track_info,
                              )
 
 from .rouse_mode_analysis import (get_rouse_modes_at_t,
@@ -48,6 +52,7 @@ from .chrom_graph_funcs import (make_total_distr_plots,
                                 plot_contact_kymo,
                                 plot_pos_kymo,
                                 plot_condensate_characterize,
+                                plot_condensate_tracks,
                                 )
 
 from .physical_scales import (get_drag_coeff,

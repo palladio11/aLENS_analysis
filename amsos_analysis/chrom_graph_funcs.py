@@ -43,8 +43,13 @@ from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              get_contact_cond_data,
                              )
 
+from .chrom_condensate_analysis import (Condensate,
+                                        get_max_and_total_cond_size,
+                                        gen_condensate_track_info,
+                                        extract_condensates)
 
-def madfe_all_condensate_graphs(h5_data, opts, overwrite=False):
+
+def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     """TODO: Docstring for make_all_condensate_graphs.
 
     @param h5_path TODO
@@ -155,15 +160,42 @@ def madfe_all_condensate_graphs(h5_data, opts, overwrite=False):
     plot_condensate_kymo(axarr4[1], contact_cond_edges,
                          ylims=[start_bead, nbeads],
                          ylabel='Bead index')
+
+    if 'max_contact_cond_size' not in analysis_grp:
+        max_width_arr, total_width_arr = get_max_and_total_cond_size(
+            time_arr, contact_cond_edges, contact_cond_num,
+            analysis=analysis_grp)
+    else:
+        max_contact_cond_size = analysis_grp['max_contact_cond_size'][...]
+        total_contact_cond_beads = analysis_grp['total_contact_cond_beads'][...]
+
     plot_condensate_characterize(axarr4[2], time_arr,
-                                 contact_cond_edges, contact_cond_num)
+                                 max_contact_cond_size,
+                                 total_contact_cond_beads,
+                                 contact_cond_num)
     fig4.tight_layout()
     fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
 
+    fig5, axarr5 = plt.subplots(1, 2, figsize=(21, 6))
+    if 'condensates' not in analysis_grp:
+        cond_grp = analysis_grp.create_group('condensates')
+        cond_lst = gen_condensate_track_info(h5_data, cond_grp)
+    else:
+        cond_lst = extract_condensates(analysis_grp['condensates'])
+
+    plot_condensate_kymo(axarr5[0], contact_cond_edges,
+                         ylims=[start_bead, nbeads],
+                         ylabel='Bead index')
+
+    plot_condensate_tracks(axarr5[1], time_arr, cond_lst,
+                           ylims=[start_bead, nbeads])
+    fig5.tight_layout()
+    fig5.savefig(opts.analysis_dir / f'contact_cond_track.png')
+
     plt.rcParams['image.cmap'] = 'coolwarm'
     # Make tension kymograph
-    fig5, ax5 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
-    fig5.savefig(opts.analysis_dir / f'tension_kymo.png')
+    fig6, ax6 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
+    fig6.savefig(opts.analysis_dir / f'tension_kymo.png')
 
 
 def make_contact_condensate_characterize_graphs(
@@ -496,7 +528,8 @@ def plot_condensate_kymo(ax, edge_coords, xlims=None,
         ax.set_ylabel(ylabel)
 
 
-def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
+def plot_condensate_characterize(
+        ax0, time_arr, max_cond_size, tot_cond_beads, cond_num_arr):
     """TODO: Docstring for plot_condensate_characterize.
 
     @param ax TODO
@@ -507,31 +540,11 @@ def plot_condensate_characterize(ax0, time_arr, edge_coords, cond_num_arr):
     """
     ax1 = ax0.twinx()
 
-    # Find the largest condensate by bead size at each time step
-    if len(edge_coords) > 0:
-        cond_widths_arr = edge_coords[:, 2] - edge_coords[:, 1]
-    else:
-        cond_widths_arr = np.asarray([])
-    i_ec = 0  # index of edge_coord
-    max_width_arr = []
-    total_width_arr = []
-    for i, t in np.ndenumerate(time_arr):
-        max_width_arr += [0]
-        total_width_arr += [0]
-        # If the number of condensates at time step is zero, leave max width 0
-        if cond_num_arr[i] == 0:
-            continue
-        # Iteratively check which is the largest condensate at a time step
-        while edge_coords[i_ec, 0] < t and i_ec < cond_widths_arr.size:
-            max_width_arr[-1] = max(max_width_arr[-1], cond_widths_arr[i_ec])
-            total_width_arr[-1] += cond_widths_arr[i_ec]
-            i_ec += 1
-
     ax0.set_xlabel('Time $t$ (sec)')
 
-    ax0.plot(time_arr, total_width_arr, color='b', label='Total')
+    ax0.plot(time_arr, tot_cond_beads, color='b', label='Total')
     ax0.plot(time_arr,
-             max_width_arr,
+             max_cond_size,
              color='b',
              linestyle='--',
              label='Largest')
@@ -590,6 +603,29 @@ def plot_pos_kymo(fig, ax, time_arr, pos_hist_kymo, bin_edges, vmax=60):
     fig.colorbar(c0, ax=ax, label=r"Number of beads")
     ax.set_ylabel(r"Position $x$ ($\mu$m)")
     ax.set_xlabel("Time $t$ (sec)")
+
+
+def plot_condensate_tracks(ax, time_arr, cond_lst, ylims=None):
+    """TODO: Docstring for plot_condesate_tracks.
+
+    @param ax TODO
+    @param time_arr TODO
+    @param cond_lst TODO
+    @param ylims TODO
+    @return: TODO
+
+    """
+    for cond in cond_lst:
+        ax.plot(cond.time_arr,
+                .5 * np.asarray(cond.edge_coord_arr).sum(axis=1),
+                label=f'id = {cond.id}')
+    ax.legend(loc='center left', bbox_to_anchor=(1.05, .5))
+    ax.set_xlim(time_arr[0], time_arr[-1])
+    if ylims is not None:
+        ax.set_ylim(ylims[0], ylims[1])
+
+    ax.set_ylabel('Bead index')
+    ax.set_xlabel('Time $t$ (sec)')
 
 
 ##########################################

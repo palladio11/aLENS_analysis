@@ -602,7 +602,8 @@ def gen_condensate_track_info(h5_data):
                 current_condensates.clear()
             continue
 
-        # Collect connectivity between all prospective edges and current condensates
+        # Collect connectivity between all prospective edges and current
+        # condensates
         test_edges = []
         te_ind = 0
         while cond_edge_dset[i_ec, 0] < t and i_ec < n_edge_coords:
@@ -614,7 +615,8 @@ def gen_condensate_track_info(h5_data):
                 if com > test_edges[-1][1] and com < test_edges[-1][2]:
                     # com of condensate is in range of prospective edge
                     ids_of_cur_coms_in_new[-1] += [cond_id]
-                if (edge_com > cond.edge_coord_arr[-1][0] and edge_com < cond.edge_coord_arr[-1][1]):
+                if (edge_com > cond.edge_coord_arr[-1][0]
+                        and edge_com < cond.edge_coord_arr[-1][1]):
                     # com of prospective edge is in range of condensate
                     inds_of_new_coms_in_cur_dict[cond_id] += [te_ind]
             te_ind += 1
@@ -623,7 +625,7 @@ def gen_condensate_track_info(h5_data):
         # Continuation logic for condensates
         conds_to_add_cur = {}
         for te_i, cur_cond_ids in enumerate(ids_of_cur_coms_in_new):
-            assert(len(cur_cond_ids) >= 0),  "No negative events"
+            assert(len(cur_cond_ids) >= 0), "No negative events"
             assert(len(cur_cond_ids) < 3), "No super merging events allowed"
 
             # No current condensates of COM in prospective edge
@@ -637,7 +639,8 @@ def gen_condensate_track_info(h5_data):
                         new_cond = Condensate(
                             next(id_gen), test_edges[te_i], split_from=[cur_id])
                         conds_to_add_cur[new_cond.id] = new_cond
-                        # Set split_to array in cur_id (always add to back split_to arr)
+                        # Set split_to array in cur_id (always add to back
+                        # split_to arr)
                         current_condensates[cur_id].split_to += [new_cond.id]
                         split_found = True
                         break
@@ -663,7 +666,8 @@ def gen_condensate_track_info(h5_data):
                         next(id_gen), test_edges[te_i], split_from=[cur_cond.id])
                     conds_to_add_cur[new_cond.id] = new_cond
                     # Add new condensate id to from of split from id because
-                    # com of current condensate is in new condensate range (always first by convention)
+                    # com of current condensate is in new condensate range
+                    # (always first by convention)
                     cur_cond.split_to = [new_cond.id] + cur_cond.split_to
             elif len(cur_cond_ids) == 2:  # Merging event
                 # Create new cond and add to conds_to_add_to_cur
@@ -671,13 +675,15 @@ def gen_condensate_track_info(h5_data):
                 conds_to_add_cur[new_cond.id] = new_cond
                 for cc_id in cur_cond_ids:
                     current_condensates[cc_id].merged_to = [new_cond.id]
-                    # Set merged_from array in new condensate (TODO see which one has com with edge in its range to add first)
+                    # Set merged_from array in new condensate
+                    # (TODO see which one has com with edge in its range to add first)
                     if te_i in inds_of_new_coms_in_cur_dict[cc_id]:
                         new_cond.merged_from = [cc_id] + new_cond.merged_from
                     else:
                         new_cond.merged_from += [cc_id]
 
-        # Move all condensates that have split, merged or ended to stored condensates
+        # Move all condensates that have split, merged or ended to stored
+        # condensates
         conds_to_remove = []
         for i, cond in current_condensates.items():
             if cond.merged_to or cond.split_to or not cond.edge_added:
