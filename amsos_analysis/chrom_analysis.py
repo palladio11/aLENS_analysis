@@ -625,8 +625,10 @@ def gen_condensate_track_info(h5_data):
         # Continuation logic for condensates
         conds_to_add_cur = {}
         for te_i, cur_cond_ids in enumerate(ids_of_cur_coms_in_new):
-            assert(len(cur_cond_ids) >= 0), "No negative events"
-            assert(len(cur_cond_ids) < 3), "No super merging events allowed"
+            assert(len(cur_cond_ids) >= 0), "No negative events allowed"
+            # assert(len(cur_cond_ids) < 3), "No super merging events allowed"
+            if (len(cur_cond_ids) > 2):
+                print(f'Super merging event at time {t}')
 
             # No current condensates of COM in prospective edge
             #   either split or spontaneous generation event
@@ -656,7 +658,8 @@ def gen_condensate_track_info(h5_data):
                 cur_cond = current_condensates[cur_cond_ids[0]]
                 n_tes = len(inds_of_new_coms_in_cur_dict[cur_cond_ids[0]])
                 assert(n_tes > 0), " One way edge?"
-                assert(n_tes < 3), " Super splitter? "
+                if (len(cur_cond_ids) > 2):
+                    print(f'Super splitting event at time {t}')
                 if n_tes == 1:  # The condensate continues
                     cur_cond.add_edge(test_edges[te_i])
                     continue

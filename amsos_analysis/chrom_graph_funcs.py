@@ -176,15 +176,16 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     fig4.tight_layout()
     fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
 
-    fig5, axarr5 = plt.subplots(1, 2, figsize=(21, 6))
+    fig5, axarr5 = plt.subplots(1, 2, figsize=(20, 8))
     if 'condensates' not in analysis_grp:
         cond_grp = analysis_grp.create_group('condensates')
         cond_lst = gen_condensate_track_info(h5_data, cond_grp)
     else:
         cond_lst = extract_condensates(analysis_grp['condensates'])
-    # del analysis_grp['condensates']
+    # if 'condensates' in analysis_grp:
+        # del analysis_grp['condensates']
     # cond_grp = analysis_grp.create_group('condensates')
-    cond_lst = gen_condensate_track_info(h5_data, cond_grp)
+    # cond_lst = gen_condensate_track_info(h5_data, cond_grp)
 
     plot_condensate_kymo(axarr5[0], contact_cond_edges,
                          ylims=[start_bead, nbeads],

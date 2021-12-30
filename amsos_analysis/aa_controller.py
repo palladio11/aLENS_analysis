@@ -30,6 +30,12 @@ MOVIE_DICT = {'hic': hic_animation,
               'min': min_animation,
               }
 
+TYPE_FUNC_DICT = {'seed': seed_analysis,
+                  'seed_scan': seed_scan_analysis,
+                  'param_scan': param_scan_analysis,
+                  'param_seed_scan': param_seed_scan_analysis,
+                  }
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -45,8 +51,21 @@ def parse_args():
     parser.add_argument('-i', "--image_input", default=None,
                         help="Image parameter yaml file")
 
-    parser.add_argument("-t", "--type", default=None,
-                        help="Type of analysis")
+    parser.add_argument("-t", "--type",
+                        choices=[
+                            "seed",
+                            "seed_scan",
+                            "param_scan",
+                            "param_seed_scan"],
+                        default="seed",
+                        help="Type of analysis. Options"
+                        " seed: single simulation analysis (default)\n"
+                        " seed_scan: analysis of data from multiple seeds\n"
+                        " param_scan: comparison of data from single seed\n"
+                        "             simulations with different parameters\n"
+                        " param_seed_scan: comparison of data of different\n"
+                        "                  parameter with multiple seeds\n"
+                        )
 
     parser.add_argument("-A ", "--analysis",
                         choices=[
@@ -125,7 +144,7 @@ def get_walltime(log_path):
     return end_dt - start_dt
 
 
-def make_graphs(opts):
+def make_seed_graphs(opts):
     """TODO: Docstring for make_graphs.
 
     @param opts TODO
@@ -140,19 +159,14 @@ def make_graphs(opts):
         make_all_condensate_graphs(h5_data, opts, overwrite=overwrite)
 
 
-def main():
-    """!Main function for AMSOS analysis controller
+def seed_analysis(opts):
+    """ All subprocesses that go into analyzing a single seed
 
-    Parameters
-    ----------
-    Will decipher command line arguments
-
-    Returns
-    -------
-    Void
+    @param opts Parsed options object
+    @return: void, hdf5 files, graphs, and movies maybe saved in analysis
+             directory
 
     """
-    opts = parse_args()
     if opts.analysis:
         if opts. analysis == 'collect':
             t0 = time.time()
@@ -172,15 +186,78 @@ def main():
 
     if opts.graph:
         t0 = time.time()
-        make_graphs(opts)
+        make_seed_graphs(opts)
         print(f" Graphs created in {time.time() - t0}")
 
-    # if opts.graph:
     try:
         h5_data.flush()
         h5_data.close()
     except BaseException:
         pass
+
+
+def seed_scan_analysis(opts):
+    """ All subprocesses that go into analyzing a single parameter set with
+    multiple random number seeds
+
+    @param opts Parsed options object
+    @return: void, hdf5 files, graphs, and movies maybe saved in analysis
+             directory
+
+    """
+    if opts.analysis:
+        if opts.analysis == 'collect':
+            # Collect all hdf5 files and put into new directory
+            pass
+    pass
+
+
+def param_scan_analysis(opts):
+    """ All subprocesses that go into analyzing a single parameter set with
+    multiple random number seeds
+
+    @param opts Parsed options object
+    @return: void, hdf5 files, graphs, and movies maybe saved in analysis
+             directory
+
+    """
+    if opts.analysis:
+        if opts.analysis == 'collect':
+            # Collect all hdf5 files and put into new directory
+            pass
+    pass
+
+
+def param_seed_scan_analysis(opts):
+    """ All subprocesses that go into analyzing a single parameter set with
+    multiple random number seeds
+
+    @param opts Parsed options object
+    @return: void, hdf5 files, graphs, and movies maybe saved in analysis
+             directory
+
+    """
+    if opts.analysis:
+        if opts.analysis == 'collect':
+            # Collect all hdf5 files and put into new directory
+            pass
+    pass
+
+
+def main():
+    """!Main function for aLENs analysis controller
+
+    Parameters
+    ----------
+    Will decipher command line arguments
+
+    Returns
+    -------
+    Void
+
+    """
+    opts = parse_args()
+    TYPE_FUNC_DICT[opts.type](opts)
 
 
 ##########################################
