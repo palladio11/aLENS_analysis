@@ -7,18 +7,11 @@ Email: alamson@flatironinstitute.org
 Description:
 """
 # Basic useful imports
-import re
-import time
 import yaml
 from copy import deepcopy
-from pprint import pprint
-from pathlib import Path
-import h5py
 
 # Data manipulation
 import numpy as np
-from scipy.special import erf
-from scipy.integrate import quad
 import scipy.stats as stats
 from scipy.signal import savgol_filter
 

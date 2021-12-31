@@ -28,32 +28,6 @@ from .read_func import (read_dat_sylinder,
 SQRT2 = np.sqrt(2)
 
 
-# def parse_args():
-
-#     parser = argparse.ArgumentParser(prog='hic_animation.py')
-#     parser.add_argument('-i', "--input", default=None,
-#                         help="Image parameter yaml file")
-#     opts = parser.parse_args()
-
-#     if opts.input is None:
-#         opts.params = {
-#             'n_graph': 30,
-#             'fps': 25,
-#             'time_step': 10.,
-#             'style': "log_contact"
-#         }
-#     else:
-#         param_path = Path(opts.input)
-#         if not param_path.exists():
-#             raise IOError(
-#                 " {} does not exist. Put in valid path.".format(param_path))
-
-#         with param_path.open('r') as pf:
-#             opts.params = yaml.safe_load(pf)
-
-#     return opts
-
-
 def make_separation_mat(com_arr, downsample=1):
     nbeads = com_arr.shape[0]
     reduc_com_arr = com_arr[::downsample]
@@ -150,7 +124,7 @@ def hic_animation(opts):
         run_params = yaml.safe_load(yf)
         opts.params['time_step'] = run_params['timeSnap']
 
-    result_dir = opts.data_dir
+    result_dir = opts.result_dir
     fil_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),
                            key=get_file_number)[::opts.params['n_graph']]
     png_paths = sorted(result_dir.glob("PNG/*.png"),
@@ -178,7 +152,10 @@ def hic_animation(opts):
                             png_paths,
                             init_mutable, opts),
                         blit=True)
-    ani.save(result_dir / f'{opts.params["style"]}_mat_vid.mp4', writer=writer)
+    ani.save(
+        opts.analysis_dir /
+        f'{opts.params["style"]}_mat_vid.mp4',
+        writer=writer)
 
 
 ##########################################

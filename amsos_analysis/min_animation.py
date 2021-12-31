@@ -55,7 +55,7 @@ def min_animation(opts):
         run_params = yaml.safe_load(yf)
         opts.params['time_step'] = run_params['timeSnap']
 
-    result_dir = opts.data_dir
+    result_dir = opts.result_dir
     png_paths = sorted(result_dir.glob("PNG/*.png"),
                        key=get_png_number)[::opts.params['n_graph']]
 
@@ -79,7 +79,7 @@ def min_animation(opts):
                             png_paths,
                             opts),
                         blit=True)
-    ani.save(result_dir / f'min_vid.mp4', writer=writer)
+    ani.save(opts.analysis_dir / f'min_vid.mp4', writer=writer)
 
 
 ##########################################

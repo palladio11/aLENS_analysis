@@ -233,26 +233,23 @@ def read_constraint_data(cons_fnames, h5_data):
     return bi_dset, col_dset
 
 
-def convert_dat_to_hdf(fname="TS_data.h5", path='.'):
+def convert_dat_to_hdf(fname="TS_data.h5", path='.', store_stress=False):
     """!TODO: Docstring for convert_dat_to_hdf.
 
     @param fname: TODO
     @return: TODO
 
     """
-    # TODO: Check to make sure path is a Path object <01-03-21, ARL> #
-    data_dir = path / 'result'
-    # Create h5 data set
+    # assert path.exists()
+    result_dir = path / 'result'
+    # Open h5 data objec to write to
     h5_data = h5py.File(fname, 'w')
 
     # Get list of tubule files, sort according to time
-    sy_dat_paths = sorted(data_dir.glob("**/SylinderAscii*.dat"),
+    sy_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),
                           key=get_file_number)
     # Get list of all protein files, sort according to time
-    xlp_dat_paths = sorted(data_dir.glob("**/ProteinAscii*.dat"),
-                           key=get_file_number)
-    # Get list of all constraint files, sort according to time
-    con_dat_paths = sorted(data_dir.glob("**/ConBlock*.pvtp"),
+    xlp_dat_paths = sorted(result_dir.glob("**/ProteinAscii*.dat"),
                            key=get_file_number)
 
     # assert(len(protein_fnames) == len(tubule_fnames))
@@ -268,11 +265,13 @@ def convert_dat_to_hdf(fname="TS_data.h5", path='.'):
     # Create group of position data
     posit_grp = h5_data.create_group('raw_data')
 
-    # protein_dset = read_protein_data(protein_fnames, posit_grp)
-
     sy_dset = read_sylinder_data(sy_dat_paths, posit_grp)
     xlp_dset = read_protein_data(xlp_dat_paths, posit_grp)
-    bi_dset, col_dset = read_constraint_data(con_dat_paths, h5_data)
+    if store_stress:
+        # Get list of all constraint files, sort according to time
+        con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
+                               key=get_file_number)
+        bi_dset, col_dset = read_constraint_data(con_dat_paths, h5_data)
 
     return h5_data
 
