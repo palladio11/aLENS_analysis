@@ -43,8 +43,7 @@ from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              get_contact_cond_data,
                              )
 
-from .chrom_condensate_analysis import (Condensate,
-                                        get_max_and_total_cond_size,
+from .chrom_condensate_analysis import (get_max_and_total_cond_size,
                                         gen_condensate_track_info,
                                         extract_condensates)
 
@@ -130,7 +129,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
         log_avg_contact_mat = analysis_grp['avg_contact_mat'][...]
 
     fig2, ax2 = make_hic_plot(com_arr, log_avg_contact_mat, vmin=-7)
-    fig2.savefig(opts.analysis_dir / f'average_log_contatct.png')
+    fig2.savefig(opts.analysis_dir / f'average_log_contact.png')
 
     # Make contact kymograph and last image
     fig4, axarr4 = plt.subplots(1, 3, figsize=(24, 6))
@@ -456,17 +455,6 @@ def make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001):
     return fig, ax
 
 
-# def make_pos_kymo_graph(h5_data, pos_hist_kymo, vmax=60):
-#     """TODO: Docstring for make_pos_kymo_graph.
-#     @return: TODO
-
-#     """
-#     time_arr, cond_hist_arr, bin_edges = get_pos_kymo_data(
-#         h5_data, ts_range=(ss_ind, end_ind), bins=200)
-#     bin_centers = .5 * (bin_edges[:-1] + bin_edges[1:])
-#     pass
-
-
 def make_rog_vs_time_graph(time_arr, com_arr, label=None):
     fig, ax = plt.subplots(figsize=(8, 6))
     rog_arr = calc_rad_of_gyration(com_arr)
@@ -630,6 +618,105 @@ def plot_condensate_tracks(ax, time_arr, cond_lst, ylims=None):
 
     ax.set_ylabel('Bead index')
     ax.set_xlabel('Time $t$ (sec)')
+
+
+def make_all_seed_scan_condensate_graphs(h5_data, sd_h5_data_lst, opts, overwrite=False):
+    cond_sty = {
+        "axes.titlesize": 20,
+        "axes.labelsize": 24,
+        "lines.linewidth": 2,
+        "lines.markersize": 2,
+        "xtick.labelsize": 24,
+        "ytick.labelsize": 24,
+        "font.size": 20,
+        "font.sans-serif": 'Helvetica',
+        "text.usetex": False,
+        'mathtext.fontset': 'cm',
+    }
+    plt.style.use(cond_sty)
+
+    fig1, axarr1 = plt.subplots(1, 3, figsize=(24, 6))
+    plot_condensate_num_sd_scan(axarr1[0], h5_data, sd_h5_data_lst)
+    plot_condensate_size_sd_scan(axarr1[1:], h5_data, sd_h5_data_lst)
+    fig1.tight_layout()
+    fig1.savefig(opts.analysis_dir / f'cond_num_size.png')
+    # if overwrite and 'analysis' in h5_data.keys():
+    #     print('Deleting analysis')
+    #     del h5_data['analysis']
+    # analysis_grp = h5_data.require_group('analysis')
+
+
+def plot_condensate_num_sd_scan(ax, h5_data, sd_h5_data_lst):
+    ss_ind = sd_h5_data_lst[0]['analysis/pos_kymo'].attrs['timestep_range'][0]
+    end_ind = sd_h5_data_lst[0]['analysis/pos_kymo'].attrs['timestep_range'][1]
+    avg_cond_num = None
+    num_seeds = len(sd_h5_data_lst)
+    for h5d in sd_h5_data_lst:
+        time_arr = h5d['time'][ss_ind:end_ind]
+        cond_num_arr = h5d['analysis']['contact_cond_num'][...]
+        if avg_cond_num is None:
+            avg_cond_num = cond_num_arr[...]
+        else:
+            avg_cond_num += cond_num_arr[...]
+        _ = ax.plot(time_arr, cond_num_arr, color='k', alpha=.1)
+
+    _ = ax.plot(time_arr, avg_cond_num/num_seeds, color='orange')
+    ax.set_xlabel('Time (sec)')
+    ax.set_ylabel('Number of condensates')
+
+
+def plot_condensate_size_sd_scan(axarr, h5_data, sd_h5_data_lst):
+    ss_ind = sd_h5_data_lst[0]['analysis/pos_kymo'].attrs['timestep_range'][0]
+    end_ind = sd_h5_data_lst[0]['analysis/pos_kymo'].attrs['timestep_range'][1]
+    axarr[0].sharey(axarr[1])
+    avg_max_width = None
+    avg_total_bead = None
+    num_seeds = len(sd_h5_data_lst)
+    for h5d in sd_h5_data_lst:
+        time_arr = h5d['time'][ss_ind:end_ind]
+        cond_num_arr = h5d['analysis']['contact_cond_num'][...]
+        edge_coords = h5d['analysis']['contact_cond_edges'][...]
+
+        # Find the largest condensate by bead size at each time step
+        if len(edge_coords) > 0:
+            cond_widths_arr = edge_coords[:, 2] - edge_coords[:, 1]
+        else:
+            cond_widths_arr = np.asarray([])
+        i_ec = 0  # index of edge_coord
+        max_width_arr = []
+        total_width_arr = []
+        for i, t in np.ndenumerate(time_arr):
+            max_width_arr += [0]
+            total_width_arr += [0]
+            # If the number of condensates at time step is zero, leave max width 0
+            if cond_num_arr[i] == 0:
+                continue
+            # Iteratively check which is the largest condensate at a time step
+            while edge_coords[i_ec, 0] < t and i_ec < cond_widths_arr.size:
+                max_width_arr[-1] = max(max_width_arr[-1],
+                                        cond_widths_arr[i_ec])
+                total_width_arr[-1] += cond_widths_arr[i_ec]
+                i_ec += 1
+        if avg_max_width is None:
+            avg_max_width = np.asarray(max_width_arr)
+            avg_total_bead = np.asarray(total_width_arr)
+        else:
+            avg_max_width += np.asarray(max_width_arr)
+            avg_total_bead += np.asarray(total_width_arr)
+
+        _ = axarr[0].plot(time_arr, max_width_arr, color='k', alpha=.1)
+        _ = axarr[1].plot(time_arr, total_width_arr, color='k', alpha=.1)
+
+    _ = axarr[0].plot(time_arr, avg_max_width/num_seeds, color='orange')
+    _ = axarr[1].plot(time_arr, avg_total_bead/num_seeds, color='orange')
+
+    _ = axarr[0].set_title('Beads in largest condensate')
+    _ = axarr[1].set_title('Total beads in condensate')
+
+    axarr[0].set_ylabel('Number of beads')
+
+    axarr[0].set_xlabel('Time (sec)')
+    axarr[1].set_xlabel('Time (sec)')
 
 
 ##########################################

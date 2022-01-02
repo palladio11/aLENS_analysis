@@ -12,7 +12,9 @@ import time
 import shutil
 
 from datetime import datetime
-from .chrom_graph_funcs import make_all_condensate_graphs
+from .chrom_graph_funcs import (
+    make_all_condensate_graphs,
+    make_all_seed_scan_condensate_graphs)
 from .read_func import convert_dat_to_hdf
 from .hic_animation import hic_animation
 from .min_animation import min_animation
@@ -65,6 +67,31 @@ def make_seed_graphs(opts):
         make_all_condensate_graphs(h5_data, opts, overwrite=overwrite)
 
 
+def make_seed_scan_graphs(opts):
+    """TODO: Docstring for make_graphs.
+
+    @param opts TODO
+    @return: TODO
+
+    """
+    opts.analysis_dir.mkdir(exist_ok=True)
+    h5_path = opts.analysis_dir / f'{opts.path.stem}.h5'
+
+    with h5py.File(h5_path, 'a') as h5_scan_data:
+        overwrite = True if opts.analysis == 'overwrite' else False
+        try:
+            sd_h5_data_lst = [
+                h5py.File(sdh5, 'r')
+                for sdh5 in opts.result_dir.glob('s*/analysis/*.h5')]
+            make_all_seed_scan_condensate_graphs(
+                h5_scan_data, sd_h5_data_lst, opts, overwrite=overwrite)
+        except BaseException:
+            raise
+        finally:
+            for sdh5 in sd_h5_data_lst:
+                sdh5.close()
+
+
 def seed_analysis(opts):
     """ All subprocesses that go into analyzing a single seed
 
@@ -87,11 +114,11 @@ def seed_analysis(opts):
             h5_data.attrs['total_seconds'] = dwtime.total_seconds()
             h5_data.attrs['walltime'] = str(dwtime)
 
-    if opts.movie:
+    elif opts.movie:
         MOVIE_DICT[opts.movie](opts)
         return
 
-    if opts.graph:
+    elif opts.graph:
         t0 = time.time()
         make_seed_graphs(opts)
         print(f" Graphs created in {time.time() - t0}")
@@ -114,16 +141,21 @@ def seed_scan_analysis(opts):
     """
     # Store a simulation directory
     opts.result_dir = opts.path / 'simulations'
-    if opts.analysis:
-        if opts.analysis == 'collect':
-            for sd in opts.result_dir.glob('s*'):
-                sd_copy = opts.analysis_dir / sd.stem
-                # Collect all graphs and images and put in new directories
-                shutil.copytree(sd / 'result/analysis', sd_copy,
-                                ignore=shutil.ignore_patterns('*.h5'),
-                                dirs_exist_ok=True)
-                # TODO Create a master hdf5 file for all of these for easier
-                # graphing?
+    if opts.analysis == 'collect':
+        for sd in opts.result_dir.glob('s*'):
+            sd_copy = opts.analysis_dir / sd.stem
+            # Collect all graphs and images and put in new directories
+            shutil.copytree(sd / 'analysis', sd_copy,
+                            ignore=shutil.ignore_patterns('*.h5'),
+                            dirs_exist_ok=True)
+
+        # TODO Create a master hdf5 file for all of these for easier
+        # graphing?
+
+    elif opts.graph:
+        t0 = time.time()
+        make_seed_scan_graphs(opts)
+        print(f" Graphs created in {time.time() - t0}")
 
 
 def param_scan_analysis(opts):
