@@ -93,7 +93,8 @@ def get_contact_kymo_data(contact_mat):
     @return: TODO
 
     """
-    # Remove interaction with self and divide by 2 to not double count contacts
+    # Remove interaction with self
+    # contact_kymo =
     return (np.sum(contact_mat, axis=0) - 1)
 
 

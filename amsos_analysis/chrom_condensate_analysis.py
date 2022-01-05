@@ -8,6 +8,7 @@ Description:
 """
 
 import numpy as np
+import warnings
 
 from .helpers import gen_id
 
@@ -136,8 +137,6 @@ def gen_condensate_track_info(h5_data, analysis=None):
         conds_to_add_cur = {}
         for te_i, cur_cond_ids in enumerate(ids_of_cur_coms_in_new):
             assert(len(cur_cond_ids) >= 0), "No negative events"
-            if len(cur_cond_ids) > 2:
-                print('Super merging event occured!')
             # assert(len(cur_cond_ids) < 3), "No super merging events allowed"
 
             # No current condensates of COM in prospective edge
@@ -167,14 +166,19 @@ def gen_condensate_track_info(h5_data, analysis=None):
             elif len(cur_cond_ids) == 1:
                 cur_cond = current_condensates[cur_cond_ids[0]]
                 n_tes = len(inds_of_new_coms_in_cur_dict[cur_cond_ids[0]])
-                assert(n_tes > 0), " One way edge?"
-                if n_tes > 3:
-                    print("Super splitter event occured")
+                if n_tes == 0:
+                    new_cond = Condensate(next(id_gen), test_edges[te_i])
+                    conds_to_add_cur[new_cond.id] = new_cond
+                    print(f"One way edge found for cond {new_cond.id}")
+                    # warnings.warn(f"One way edge found for cond {new_cond.id}")
                 # assert(n_tes < 3), " Super splitter? "
                 if n_tes == 1:  # The condensate continues
                     cur_cond.add_edge(test_edges[te_i])
                     continue
-                elif n_tes == 2:  # Splitting event
+                elif n_tes > 1:  # Splitting event
+                    if n_tes > 2:
+                        print(
+                            f"Super splitter event occured for cond {cur_cond.id}")
                     # Create new condensate and add to conds_to_add_to_cur
                     new_cond = Condensate(
                         next(id_gen), test_edges[te_i], split_from=[cur_cond.id])
@@ -183,14 +187,14 @@ def gen_condensate_track_info(h5_data, analysis=None):
                     # com of current condensate is in new condensate range
                     # (always first by convention)
                     cur_cond.split_to = [new_cond.id] + cur_cond.split_to
-            elif len(cur_cond_ids) == 2:  # Merging event
+            elif len(cur_cond_ids) > 1:  # Merging event
                 # Create new cond and add to conds_to_add_to_cur
                 new_cond = Condensate(next(id_gen), test_edges[te_i])
                 conds_to_add_cur[new_cond.id] = new_cond
+                if len(cur_cond_ids) > 2:
+                    print(f'Super merging event occured at cond {new_cond.id}')
                 for cc_id in cur_cond_ids:
                     current_condensates[cc_id].merged_to = [new_cond.id]
-                    # Set merged_from array in new condensate (TODO see which
-                    # one has com with edge in its range to add first)
                     if te_i in inds_of_new_coms_in_cur_dict[cc_id]:
                         new_cond.merged_from = [cc_id] + new_cond.merged_from
                     else:
@@ -224,11 +228,11 @@ def extract_condensates(h5_grp):
 
     """
     cond_lst = []
-    for cond_dset in h5_grp:
+    for cond_dset in h5_grp.values():
         cond = Condensate(0, (0, 0, 0))  # Make dummy condensate object
         cond.set_cond_from_hdf5(cond_dset)
         cond_lst += [cond]
-    return cond_lst
+    return sorted(cond_lst, key=lambda cond: cond.id)
 
 
 def get_max_and_total_cond_size(

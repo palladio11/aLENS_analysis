@@ -9,6 +9,7 @@ __version__ = '0.1.0'
 from .chrom_condensate_analysis import (Condensate,
                                         gen_condensate_track_info,
                                         get_max_and_total_cond_size,
+                                        extract_condensates
                                         )
 
 from .chrom_analysis import (gauss_weighted_contact,
@@ -35,6 +36,10 @@ from .chrom_analysis import (gauss_weighted_contact,
                              get_contact_cond_data,
                              )
 
+from .chrom_seed_scan_analysis import(get_scan_cond_data,
+                                      get_scan_avg_contact_mat,
+                                      get_scan_avg_kymo)
+
 from .rouse_mode_analysis import (get_rouse_modes_at_t,
                                   get_rouse_modes,
                                   get_rouse_mode_corr,
@@ -53,7 +58,12 @@ from .chrom_graph_funcs import (make_total_distr_plots,
                                 plot_pos_kymo,
                                 plot_condensate_characterize,
                                 plot_condensate_tracks,
+                                plot_condensate_size_vs_time,
+                                plot_condensate_avg_contact_vs_time,
                                 )
+
+from .chrom_seed_scan_graph_funcs import (plot_condensate_num_sd_scan,
+                                          plot_condensate_size_sd_scan)
 
 from .physical_scales import (get_drag_coeff,
                               get_char_time,
