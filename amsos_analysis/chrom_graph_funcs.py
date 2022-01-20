@@ -154,6 +154,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
         contact_cond_num = analysis_grp['contact_cond_num'][...]
 
     plot_condensate_kymo(axarr4[1], contact_cond_edges,
+                         xlims=[time_arr[0], time_arr[-1]],
                          ylims=[start_bead, nbeads],
                          ylabel='Bead index')
 
@@ -172,7 +173,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     fig4.tight_layout()
     fig4.savefig(opts.analysis_dir / f'contact_cond_charact.png')
 
-    fig5, axarr5 = plt.subplots(1, 2, figsize=(20, 8))
+    fig5, axarr5 = plt.subplots(2, 2, figsize=(18, 13))
     if 'condensates' not in analysis_grp:
         cond_grp = analysis_grp.create_group('condensates')
         cond_lst = gen_condensate_track_info(h5_data, cond_grp)
@@ -183,13 +184,21 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     # cond_grp = analysis_grp.create_group('condensates')
     # cond_lst = gen_condensate_track_info(h5_data, cond_grp)
 
-    plot_condensate_kymo(axarr5[0], contact_cond_edges,
+    plot_condensate_kymo(axarr5[0, 0], contact_cond_edges,
+                         xlims=[time_arr[0], time_arr[-1]],
                          ylims=[start_bead, nbeads],
                          ylabel='Bead index')
 
-    plot_condensate_tracks(axarr5[1], time_arr, cond_lst,
+    plot_condensate_tracks(axarr5[0, 1], time_arr, cond_lst,
                            ylims=[start_bead, nbeads])
-    fig5.tight_layout()
+
+    plot_condensate_avg_contact_vs_time(axarr5[1, 0], time_arr, contact_kymo, cond_lst,
+                                        same_start_flag=False)
+
+    plot_condensate_size_vs_time(
+        axarr5[1, 1], time_arr, cond_lst, same_start_flag=False)
+
+    # fig5.tight_layout()
     fig5.savefig(opts.analysis_dir / f'contact_cond_track.png')
 
     plt.rcParams['image.cmap'] = 'coolwarm'

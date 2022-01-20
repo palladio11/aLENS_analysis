@@ -112,21 +112,21 @@ def seed_analysis(opts):
             dwtime = get_walltime(opts.path / 'run.log')
             h5_data.attrs['total_seconds'] = dwtime.total_seconds()
             h5_data.attrs['walltime'] = str(dwtime)
+        try:
+            h5_data.flush()
+            h5_data.close()
+        except BaseException:
+            print("Could not close h5_data file")
+            pass
 
-    elif opts.movie:
+    if opts.movie:
         MOVIE_DICT[opts.movie](opts)
         return
 
-    elif opts.graph:
+    if opts.graph:
         t0 = time.time()
         make_seed_graphs(opts)
         print(f" Graphs created in {time.time() - t0}")
-
-    try:
-        h5_data.flush()
-        h5_data.close()
-    except BaseException:
-        pass
 
 
 def seed_scan_analysis(opts):

@@ -30,7 +30,13 @@ import matplotlib.colors as colors
 from .chrom_seed_scan_analysis import (get_scan_cond_data,
                                        get_scan_avg_contact_mat,
                                        get_scan_avg_kymo)
-from .chrom_graph_funcs import (make_hic_plot, plot_contact_kymo)
+
+from .chrom_graph_funcs import (make_hic_plot, plot_contact_kymo,
+                                plot_condensate_avg_contact_vs_time,
+                                plot_condensate_size_vs_time)
+
+from .chrom_condensate_analysis import (gen_condensate_track_info,
+                                        extract_condensates)
 
 
 def sd_num(h5_data):
@@ -79,16 +85,25 @@ def make_all_seed_scan_condensate_graphs(
     fig1.tight_layout()
     fig1.savefig(opts.analysis_dir / f'cond_num_size.png')
 
+    fig2, axarr2 = plt.subplots(1, 3, figsize=(24, 6))
+
+    plot_avg_contact_tracks(axarr2[0], sd_h5_data_lst, time_arr)
+    plot_cond_size_tracks(axarr2[1], sd_h5_data_lst, time_arr)
+    axarr2[0].set_ylim(0)
+    axarr2[1].set_ylim(0)
+
+    fig2.tight_layout()
+    fig2.savefig(opts.analysis_dir / f'cond_num_size.png')
+
     plt.rcParams['image.cmap'] = 'YlOrRd'
-
     log_avg_contact_mat = get_scan_avg_contact_mat(sd_h5_data_lst)
-    fig2, ax2 = make_hic_plot(nbeads, log_avg_contact_mat, vmin=-7.)
-    fig2.savefig(opts.analysis_dir / f'log_avg_contact_mat.png')
+    fig3, ax3 = make_hic_plot(nbeads, log_avg_contact_mat, vmin=-7.)
+    fig3.savefig(opts.analysis_dir / f'log_avg_contact_mat.png')
 
-    fig3, ax3 = plt.subplots(figsize=(8, 6))
+    fig4, ax4 = plt.subplots(figsize=(8, 6))
     avg_contact_kymo = get_scan_avg_kymo(sd_h5_data_lst)
-    plot_contact_kymo(fig3, ax3, time_arr, avg_contact_kymo, vmax=7.)
-    fig3.savefig(opts.analysis_dir / f'avg_contact_kymo.png')
+    plot_contact_kymo(fig4, ax4, time_arr, avg_contact_kymo, vmax=7.)
+    fig4.savefig(opts.analysis_dir / f'avg_contact_kymo.png')
 
 
 def plot_condensate_num_sd_scan(ax, time_arr, cond_num_arr):
@@ -123,6 +138,38 @@ def plot_condensate_size_sd_scan(
     axarr[1].set_xlabel('Time (sec)')
 
 
-##########################################
+def plot_avg_contact_tracks(ax, sd_h5_data_lst, time_arr):
+    for h5_data in sd_h5_data_lst:
+        analysis_grp = h5_data['analysis']
+
+        contact_kymo = analysis_grp['contact_kymo'][...]
+        nbeads = contact_kymo.shape[0]
+        contact_cond_edges = analysis_grp['contact_cond_edges'][...]
+        if 'condensates' not in analysis_grp:
+            cond_lst = gen_condensate_track_info(h5_data)
+        else:
+            cond_lst = extract_condensates(analysis_grp['condensates'])
+
+        plot_condensate_avg_contact_vs_time(ax, time_arr, contact_kymo, cond_lst,
+                                            same_start_flag=True, color='k', alpha=.1)
+
+
+def plot_cond_size_tracks(ax, sd_h5_data_lst, time_arr):
+    for h5_data in sd_h5_data_lst:
+        analysis_grp = h5_data['analysis']
+
+        contact_kymo = analysis_grp['contact_kymo'][...]
+        nbeads = contact_kymo.shape[0]
+        contact_cond_edges = analysis_grp['contact_cond_edges'][...]
+        if 'condensates' not in analysis_grp:
+            cond_lst = gen_condensate_track_info(h5_data)
+        else:
+            cond_lst = extract_condensates(analysis_grp['condensates'])
+
+        plot_condensate_avg_contact_vs_time(ax, time_arr, contact_kymo, cond_lst,
+                                            same_start_flag=True, color='k', alpha=.1)
+
+
+    ##########################################
 if __name__ == "__main__":
     print("Not implemented yet")
