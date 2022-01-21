@@ -98,11 +98,13 @@ def make_all_seed_scan_condensate_graphs(
     plt.rcParams['image.cmap'] = 'YlOrRd'
     log_avg_contact_mat = get_scan_avg_contact_mat(sd_h5_data_lst)
     fig3, ax3 = make_hic_plot(nbeads, log_avg_contact_mat, vmin=-7.)
+    fig3.tight_layout()
     fig3.savefig(opts.analysis_dir / f'log_avg_contact_mat.png')
 
     fig4, ax4 = plt.subplots(figsize=(8, 6))
     avg_contact_kymo = get_scan_avg_kymo(sd_h5_data_lst)
     plot_contact_kymo(fig4, ax4, time_arr, avg_contact_kymo, vmax=7.)
+    fig4.tight_layout()
     fig4.savefig(opts.analysis_dir / f'avg_contact_kymo.png')
 
 
@@ -166,9 +168,8 @@ def plot_cond_size_tracks(ax, sd_h5_data_lst, time_arr):
         else:
             cond_lst = extract_condensates(analysis_grp['condensates'])
 
-        plot_condensate_avg_contact_vs_time(ax, time_arr, contact_kymo, cond_lst,
-                                            same_start_flag=True, color='k', alpha=.1)
-
+        plot_condensate_size_vs_time(ax, time_arr, cond_lst,
+                                     same_start_flag=True, color='k', alpha=.1)
 
     ##########################################
 if __name__ == "__main__":
