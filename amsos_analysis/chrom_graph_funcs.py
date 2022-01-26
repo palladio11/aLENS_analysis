@@ -86,7 +86,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     nbeads = com_arr.shape[0]
 
     # Make combined position kymo graph and condensate graph
-    fig1, axarr1 = plt.subplots(1, 2, figsize=(20, 8))
+    fig1, axarr1 = plt.subplots(1, 3, figsize=(30, 8))
 
     if 'pos_kymo' not in analysis_grp.keys():
         time_arr, cond_hist_arr, bin_edges = get_pos_kymo_data(
@@ -99,6 +99,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
         cond_hist_arr = analysis_grp['pos_kymo'][...]
         bin_edges = analysis_grp['pos_kymo_bin_edges'][...]
     bin_centers = .5 * (bin_edges[:-1] + bin_edges[1:])
+
     plot_pos_kymo(fig1, axarr1[0], time_arr, cond_hist_arr, bin_edges)
 
     # Make position condensate graph
@@ -109,9 +110,15 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     else:
         pos_cond_edge_coords = analysis_grp['pos_cond_edges'][...]
         pos_cond_num_arr = analysis_grp['pos_cond_num'][...]
-    plot_condensate_kymo(axarr1[1], pos_cond_edge_coords)
-    axarr1[1].set_ylim(bin_centers[0], bin_centers[-1])
+    plot_condensate_kymo(axarr1[1], pos_cond_edge_coords, ylims=(
+        bin_centers[0], bin_centers[-1]))
 
+    pos_cond_lst = gen_condensate_track_info(
+        time_arr, pos_cond_edge_coords, pos_cond_num_arr)
+    plot_condensate_tracks(axarr1[2], time_arr, pos_cond_lst, ylims=(
+        bin_centers[0], bin_centers[-1]), legend_flag=False, ylabel=None)
+
+    fig1.tight_layout()
     fig1.savefig(opts.analysis_dir / f'pos_kymo.png')
 
     # register_cmaps()
@@ -136,7 +143,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
                 com_arr, avg_block_step=1)
     else:
         contact_kymo = analysis_grp['contact_kymo'][...]
-    # TODO better handling of this
+    # TODO better handling of this. Options for vmin and vmax and stuff
     if contact_mat is not None:
         fig3, axarr3 = make_summed_contact_kymo_graph(
             contact_mat, time_arr, contact_type="", vmin=-25, vmax=7,
@@ -176,9 +183,12 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     fig5, axarr5 = plt.subplots(2, 2, figsize=(18, 13))
     if 'condensates' not in analysis_grp:
         cond_grp = analysis_grp.create_group('condensates')
-        cond_lst = gen_condensate_track_info(h5_data, cond_grp)
+        cond_lst = gen_condensate_track_info(
+            time_arr, contact_cond_edges, contact_cond_num, cond_grp)
     else:
         cond_lst = extract_condensates(analysis_grp['condensates'])
+
+    # NOTE: Add back in if you want to wipe out condensate info
     # if 'condensates' in analysis_grp:
         # del analysis_grp['condensates']
     # cond_grp = analysis_grp.create_group('condensates')
@@ -205,6 +215,9 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     # Make tension kymograph
     fig6, ax6 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
     fig6.savefig(opts.analysis_dir / f'tension_kymo.png')
+
+    fig7, ax7 = make_tension_hists(h5_data, ss_ind, end_ind, time_win=1001)
+    fig7.savefig(opts.analysis_dir / f'tension_hists.png')
 
 
 def make_contact_condensate_characterize_graphs(
@@ -461,6 +474,53 @@ def make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001):
     return fig, ax
 
 
+def make_tension_hists(h5_data, ss_ind, end_ind):
+    """TODO: Docstring for make_tension_kymo.
+
+    @param h5_data TODO
+    @return: TODO
+
+    """
+    fig, axarr = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(16, 14))
+    time_arr = h5_data['time'][ss_ind:-1]
+
+    tension_arr0 = get_link_tension(h5_data)[0, ss_ind:end_ind]
+    tension_arr1 = get_link_tension(h5_data)[1, ss_ind:end_ind]
+    tension_arr_1 = get_link_tension(h5_data)[-1, ss_ind:end_ind]
+    tension_arr_2 = get_link_tension(h5_data)[-2, ss_ind:end_ind]
+
+    _ = axarr[0, 0].hist(tension_arr0, bins=60)
+    _ = axarr[0, 0].axvline(tension_arr0.mean(),
+                            color='r',
+                            label='mean = {:.4g} pN'.format(tension_arr0.mean()))
+    _ = axarr[0, 1].hist(tension_arr1, bins=60)
+    _ = axarr[0, 1].axvline(tension_arr1.mean(),
+                            color='r',
+                            label='mean = {:.4g} pN'.format(tension_arr1.mean()))
+
+    _ = axarr[1, 0].hist(tension_arr_1, bins=60)
+    _ = axarr[1, 0].axvline(tension_arr_1.mean(),
+                            color='r',
+                            label='mean = {:.4g} pN'.format(tension_arr_1.mean()))
+    _ = axarr[1, 1].hist(tension_arr_2, bins=60)
+    _ = axarr[1, 1].axvline(tension_arr_2.mean(),
+                            color='r',
+                            label='mean = {:.4g} pN'.format(tension_arr_2.mean()))
+
+    # axarr[0,1].sharey(axarr[0,0])
+    axarr[0, 0].set_title('First spring')
+    axarr[0, 1].set_title('Second spring')
+    axarr[1, 0].set_title('Last spring')
+    axarr[1, 1].set_title('Second-to-last spring')
+
+    axarr[0, 0].set_ylabel('Count')
+    axarr[1, 0].set_ylabel('Count')
+    axarr[1, 0].set_xlabel('Tension (pN)')
+    axarr[1, 1].set_xlabel('Tension (pN)')
+
+    return fig, axarr
+
+
 def make_rog_vs_time_graph(time_arr, com_arr, label=None):
     fig, ax = plt.subplots(figsize=(8, 6))
     rog_arr = calc_rad_of_gyration(com_arr)
@@ -603,7 +663,8 @@ def plot_pos_kymo(fig, ax, time_arr, pos_hist_kymo, bin_edges, vmax=60):
     ax.set_xlabel("Time $t$ (sec)")
 
 
-def plot_condensate_tracks(ax, time_arr, cond_lst, ylims=None):
+def plot_condensate_tracks(ax, time_arr, cond_lst,
+                           ylims=None, legend_flag=True, ylabel='Bead index'):
     """TODO: Docstring for plot_condesate_tracks.
 
     @param ax TODO
@@ -617,12 +678,14 @@ def plot_condensate_tracks(ax, time_arr, cond_lst, ylims=None):
         ax.plot(cond.time_arr,
                 .5 * np.asarray(cond.edge_coord_arr).sum(axis=1),
                 label=f'id = {cond.id}')
-    ax.legend(loc='center left', bbox_to_anchor=(1.05, .5))
+
+    if legend_flag:
+        ax.legend(loc='center left', bbox_to_anchor=(1.05, .5))
     ax.set_xlim(time_arr[0], time_arr[-1])
     if ylims is not None:
         ax.set_ylim(ylims[0], ylims[1])
 
-    ax.set_ylabel('Bead index')
+    ax.set_ylabel(ylabel)
     ax.set_xlabel('Time $t$ (sec)')
 
 

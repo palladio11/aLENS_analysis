@@ -9,7 +9,8 @@ __version__ = '0.1.0'
 from .chrom_condensate_analysis import (Condensate,
                                         gen_condensate_track_info,
                                         get_max_and_total_cond_size,
-                                        extract_condensates
+                                        extract_condensates,
+                                        get_auto_corr_fast
                                         )
 
 from .chrom_analysis import (gauss_weighted_contact,

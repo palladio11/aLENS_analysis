@@ -77,16 +77,17 @@ class Condensate(object):
         self.split_to = h5_data.attrs['split_to']
 
 
-def gen_condensate_track_info(h5_data, analysis=None):
-    ts_range = h5_data['analysis']['pos_kymo'].attrs['timestep_range']
-    time_arr = h5_data['time'][ts_range[0]:ts_range[1]]
+def gen_condensate_track_info(time_arr, cond_edge_arr, cond_num_arr,
+                              analysis=None):
+    # ts_range = h5_data['analysis']['pos_kymo'].attrs['timestep_range']
+    # time_arr = h5_data['time'][ts_range[0]:ts_range[1]]
     id_gen = gen_id()
 
     # Contact condensate dataset
     # ind 0= time, ind 1= lower edge bead index, ind 2= higher edge bed index
-    cond_edge_dset = h5_data['analysis']['contact_cond_edges']
-    cond_num_arr = h5_data['analysis']['contact_cond_num'][...]
-    n_edge_coords = cond_edge_dset[...].size
+    # cond_edge_dset = h5_data['analysis']['contact_cond_edges']
+    # cond_num_arr = h5_data['analysis']['contact_cond_num'][...]
+    n_edge_coords = cond_edge_arr[...].size
 
     i_ec = 0  # index of edge_coord
     stored_condensates = {}
@@ -117,8 +118,8 @@ def gen_condensate_track_info(h5_data, analysis=None):
         # condensates
         test_edges = []
         te_ind = 0
-        while cond_edge_dset[i_ec, 0] < t and i_ec < n_edge_coords:
-            test_edges += [cond_edge_dset[i_ec, :]]
+        while cond_edge_arr[i_ec, 0] < t and i_ec < n_edge_coords:
+            test_edges += [cond_edge_arr[i_ec, :]]
             edge_com = .5 * (test_edges[-1][1] + test_edges[-1][2])
             ids_of_cur_coms_in_new += [[]]
             for cond_id, cond in current_condensates.items():
@@ -271,6 +272,31 @@ def get_max_and_total_cond_size(
             'total_contact_cond_beads', data=total_width_arr)
 
     return np.asarray(max_width_arr), np.asarray(total_width_arr)
+
+
+def next_pow_two(n):
+    i = 1
+    while i < n:
+        i = i << 1
+    return i
+
+
+def get_auto_corr_fast(pos_arr):
+    """Get the autocorrelation function for positions.
+
+    @param pos_arr  TODO
+    @return: TODO
+
+    """
+    nsteps = pos_arr.size
+    n = next_pow_two(nsteps)
+
+    # Compute the FFT and then (from that) the auto-correlation function
+    f = np.fft.fftn(pos_arr, s=[2 * n], axes=[-1])
+    pos_corr = np.fft.ifftn(f * np.conjugate(f))[:nsteps].real
+
+    pos_corr /= 4 * n
+    return pos_corr
 
 
 ##########################################

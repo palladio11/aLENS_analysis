@@ -93,7 +93,7 @@ def make_all_seed_scan_condensate_graphs(
     axarr2[1].set_ylim(0)
 
     fig2.tight_layout()
-    fig2.savefig(opts.analysis_dir / f'cond_num_size.png')
+    fig2.savefig(opts.analysis_dir / f'cond_tracks_avgs.png')
 
     plt.rcParams['image.cmap'] = 'YlOrRd'
     log_avg_contact_mat = get_scan_avg_contact_mat(sd_h5_data_lst)
@@ -116,6 +116,7 @@ def plot_condensate_num_sd_scan(ax, time_arr, cond_num_arr):
     _ = ax.plot(time_arr, avg_cond_num, color='orange')
     ax.set_xlabel('Time (sec)')
     ax.set_ylabel('Number of condensates')
+    ax.set_ylim(0)
 
 
 def plot_condensate_size_sd_scan(

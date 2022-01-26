@@ -60,7 +60,7 @@ def get_link_energy_arrays(h5_data, write=False):
         energy_dset = h5_data['analysis'].create_dataset(
             'link_energy', data=np.stack(mean_energy, sem_energy))
         energy_dset.attrs['nsylinders'] = energy_arr.shape[0]
-    return mean_energy, sem_energy, kbt
+    return mean_energy, sem_energy, kbt, expt_energy
 
 
 def get_link_tension(h5_data, write=False):
