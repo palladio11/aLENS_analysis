@@ -200,7 +200,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
                          ylabel='Bead index')
 
     plot_condensate_tracks(axarr5[0, 1], time_arr, cond_lst,
-                           ylims=[start_bead, nbeads])
+                           ylims=[start_bead, nbeads], )
 
     plot_condensate_avg_contact_vs_time(axarr5[1, 0], time_arr, contact_kymo, cond_lst,
                                         same_start_flag=False)
@@ -216,7 +216,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     fig6, ax6 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
     fig6.savefig(opts.analysis_dir / f'tension_kymo.png')
 
-    fig7, ax7 = make_tension_hists(h5_data, ss_ind, end_ind, time_win=1001)
+    fig7, ax7 = make_tension_hists(h5_data, ss_ind, end_ind)
     fig7.savefig(opts.analysis_dir / f'tension_hists.png')
 
 
@@ -517,6 +517,9 @@ def make_tension_hists(h5_data, ss_ind, end_ind):
     axarr[1, 0].set_ylabel('Count')
     axarr[1, 0].set_xlabel('Tension (pN)')
     axarr[1, 1].set_xlabel('Tension (pN)')
+
+    for ax in axarr.flatten():
+        ax.legend()
 
     return fig, axarr
 
