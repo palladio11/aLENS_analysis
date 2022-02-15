@@ -4,6 +4,7 @@ import glob
 import argparse as agp
 
 import numpy as np
+from numpy.lib.recfunctions import structured_to_unstructured
 import scipy.sparse as ss
 import scipy.io as sio
 
@@ -238,9 +239,9 @@ def calcPolarP(PList, weight=None):
 
 def calcCenterOrient(TList):
     '''TList must be a numpy array with shape (N,8), gid, radius, end0, end1'''
-    assert TList.shape[1] == 8
-    minus_ends = TList[:, 2:5]
-    plus_ends = TList[:, 5:8]
+    # assert TList.shape[1] == 8
+    minus_ends = structured_to_unstructured(TList[['mx', 'my', 'mz']])
+    plus_ends = structured_to_unstructured(TList[['px', 'py', 'pz']])
     centers = 0.5*(minus_ends+plus_ends)
     orients = normalize_all(plus_ends-minus_ends)
     N = orients.shape[0]
@@ -255,11 +256,11 @@ def parseSylinderAscii(filename,  sort=True, info=False):
               ]
     data = np.loadtxt(filename, skiprows=2,
                       usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9), dtype=fields)
-    if info:
-        print(data[:10])
 
     if sort:
         data = np.sort(data, order='gid')  # sort by gid
+    if info:
+        print(data[:10])
 
     return data
 
@@ -272,11 +273,11 @@ def parseProteinAscii(filename, sort=True, info=False):
               ]
     data = np.loadtxt(filename, skiprows=2,
                       usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), dtype=fields)
-    if info:
-        print(data[:10])
 
     if sort:
         data = np.sort(data, order='gid')  # sort by gid
+    if info:
+        print(data[:10])
 
     return data
 
