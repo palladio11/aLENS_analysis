@@ -100,7 +100,7 @@ def seed_analysis(opts):
 
     """
     if opts.analysis == 'collect':
-        make_pvd_files(opts.result_dir)
+        # make_pvd_files(opts.result_dir)
         t0 = time.time()
         h5_path = opts.analysis_dir / f'{opts.path.stem}.h5'
         print(f'{opts.path.stem}')

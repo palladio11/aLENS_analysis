@@ -88,7 +88,7 @@ def parse_args():
         'style': "log_contact",
         'downsample': 1,
         'vmin': -20,
-        # 'bead_range': [0, 520],
+        # 'bead_range': [0, 200],
         'bead_range': None,
     }
 

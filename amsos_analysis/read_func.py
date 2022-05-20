@@ -244,6 +244,7 @@ def convert_dat_to_hdf(fname="TS_data.h5", path='.', store_stress=False):
     result_dir = path / 'result'
     # Open h5 data objec to write to
     h5_data = h5py.File(fname, 'w')
+    # TODO: Use zipfile in order to get this data  <08-02-22, ARL> #
 
     # Get list of tubule files, sort according to time
     sy_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),

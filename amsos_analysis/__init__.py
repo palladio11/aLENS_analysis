@@ -64,7 +64,8 @@ from .chrom_graph_funcs import (make_total_distr_plots,
                                 )
 
 from .chrom_seed_scan_graph_funcs import (plot_condensate_num_sd_scan,
-                                          plot_condensate_size_sd_scan)
+                                          plot_condensate_size_sd_scan,
+                                          sd_num)
 
 from .physical_scales import (get_drag_coeff,
                               get_char_time,
@@ -75,3 +76,12 @@ from .physical_scales import (get_drag_coeff,
                               )
 
 from .colormaps import register_cmaps
+
+from .gillespie_diffuse_alg import (green_diff_fpt_dist,
+                                    )
+
+from .gillespie_main import (run_gill_gen,
+                             )
+from .gill_graph_funcs import (find_avg_val_arr)
+
+from .controller_funcs import (TYPE_FUNC_DICT)

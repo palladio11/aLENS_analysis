@@ -73,7 +73,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     analysis_grp = h5_data.require_group('analysis')
 
     # Start and end of data arrays
-    ss_ind = 1
+    ss_ind = 0
     end_ind = -1
     start_bead = 0
     end_bead = None
@@ -106,7 +106,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     if 'pos_cond_edges' not in analysis_grp:
         pos_cond_edge_coords, pos_cond_num_arr = get_pos_cond_data(
             time_arr, cond_hist_arr, bin_centers, 10, bin_win=0,
-            time_win=1001, analysis=analysis_grp)
+            time_win=201, analysis=analysis_grp)
     else:
         pos_cond_edge_coords = analysis_grp['pos_cond_edges'][...]
         pos_cond_num_arr = analysis_grp['pos_cond_num'][...]
@@ -154,7 +154,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
     # Make contact condensate analysis
     if 'contact_cond_edges' not in analysis_grp:
         contact_cond_edges, contact_cond_num = get_contact_cond_data(
-            time_arr, contact_kymo, 3.5, bead_win=101, time_win=1001,
+            time_arr, contact_kymo, 3.5, bead_win=101, time_win=201,
             analysis=analysis_grp)
     else:
         contact_cond_edges = analysis_grp['contact_cond_edges'][...]
@@ -213,7 +213,7 @@ def make_all_condensate_graphs(h5_data, opts, overwrite=False):
 
     plt.rcParams['image.cmap'] = 'coolwarm'
     # Make tension kymograph
-    fig6, ax6 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=1001)
+    fig6, ax6 = make_tension_kymo(h5_data, ss_ind, end_ind, time_win=201)
     fig6.savefig(opts.analysis_dir / f'tension_kymo.png')
 
     fig7, ax7 = make_tension_hists(h5_data, ss_ind, end_ind)
@@ -398,10 +398,10 @@ def make_summed_contact_kymo_graph(contact_mat,
                                    vmin=-25, vmax=10,
                                    avg_contact_mat=None, avg_vmin=-7):
 
-    plt.rcParams['image.cmap'] = 'YlOrRd'
+    # plt.rcParams['image.cmap'] = 'YlOrRd'
     nbeads = contact_mat.shape[0]
     if isinstance(avg_contact_mat, np.ndarray):
-        fig, axarr = plt.subplots(1, 3, figsize=(22, 6))
+        fig, axarr = plt.subplots(1, 3, figsize=(33, 9))
         x = np.arange(nbeads + 1)[::int((nbeads) / avg_contact_mat.shape[0])]
         X, Y = np.meshgrid(x, x)
         c = axarr[2].pcolorfast(X, Y, avg_contact_mat, vmin=avg_vmin)
@@ -418,13 +418,13 @@ def make_summed_contact_kymo_graph(contact_mat,
     x = np.arange(nbeads + 1)[::int((nbeads) / contact_mat.shape[0])]
     X, Y = np.meshgrid(x, x)
     c1 = axarr[0].pcolorfast(X, Y,
-                             np.log(contact_mat[:, :, -1]), vmin=vmin)
+                             np.log(contact_mat[:, :, -1]) / np.log(10), vmin=vmin)
     axarr[0].set_aspect('equal')
     _ = fig.colorbar(c1, ax=axarr[0], label="Log contact probability")
     _ = axarr[0].set_xlabel(r'Bead index')
     _ = axarr[0].set_ylabel(r'Bead index')
-    _ = axarr[0].set_title(
-        'Last frame contact mat \n 1 bead $\sim$ 200-400 bp')
+    # _ = axarr[0].set_title(
+    # 'Last frame contact mat \n 1 bead $\sim$ 200-400 bp')
 
     # Contact kymograph
     contact_kymo = get_contact_kymo_data(contact_mat)

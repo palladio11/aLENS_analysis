@@ -12,6 +12,7 @@ from time import time
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib.gridspec import GridSpec
 from matplotlib.animation import FuncAnimation, FFMpegWriter
 import math
 import yaml
@@ -92,11 +93,11 @@ def animate(i, fig, axarr, fil_dat_paths, png_paths, init_mutable, opts):
             ax=axarr[1],
             # label=r"$\log$(Inferred contact map) $\sim$
             # ($r_{ij}^2/2\sigma^2$)")
-            label=r"$\log$(Inferred contact map) $\sim$ ($-r_{ij}^2$)")
+            label=r"Log contact probability $\sim$ ($-r_{ij}^2$)")
         init_mutable[0] = False
 
-    axarr[1].set_xlabel(r"Bead $i$")
-    axarr[1].set_ylabel(r"Bead $j$")
+    axarr[1].set_xlabel(r"Bead index")
+    axarr[1].set_ylabel(r"Bead index")
 
     # pcm = ax.pcolorfast(frames[i], cmap='gray', vmax=vmax)
     axarr[0].set_title("Time {:.2f} sec".format(
@@ -135,6 +136,11 @@ def hic_animation(opts):
     nframes = len(png_paths)
     print(nframes)
     fig, axarr = plt.subplots(1, 2, figsize=(20, 8))
+    # fig = plt.figure(figsize=(20, 8))
+    # gs = GridSpec(1, 3)
+    # axarr = [fig.add_subplot(gs[:-1])]
+    # axarr += [fig.add_subplot(gs[-1])]
+
     axarr[1].set_aspect('equal')
     writer = FFMpegWriter(
         fps=opts.params['fps'],

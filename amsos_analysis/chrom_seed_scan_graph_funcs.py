@@ -45,7 +45,7 @@ def sd_num(h5_data):
 
 
 def make_all_seed_scan_condensate_graphs(
-        h5_data, sd_h5_data_lst, opts, overwrite=False):
+        h5_scan_data, sd_h5_data_lst, opts, overwrite=False):
     cond_sty = {
         "axes.titlesize": 20,
         "axes.labelsize": 24,
@@ -148,8 +148,10 @@ def plot_avg_contact_tracks(ax, sd_h5_data_lst, time_arr):
         contact_kymo = analysis_grp['contact_kymo'][...]
         nbeads = contact_kymo.shape[0]
         contact_cond_edges = analysis_grp['contact_cond_edges'][...]
+        contact_cond_num = analysis_grp['contact_cond_num'][...]
         if 'condensates' not in analysis_grp:
-            cond_lst = gen_condensate_track_info(h5_data)
+            cond_lst = gen_condensate_track_info(time_arr, contact_cond_edges,
+                                                 contact_cond_num)
         else:
             cond_lst = extract_condensates(analysis_grp['condensates'])
 
@@ -164,13 +166,16 @@ def plot_cond_size_tracks(ax, sd_h5_data_lst, time_arr):
         contact_kymo = analysis_grp['contact_kymo'][...]
         nbeads = contact_kymo.shape[0]
         contact_cond_edges = analysis_grp['contact_cond_edges'][...]
+        contact_cond_num = analysis_grp['contact_cond_num'][...]
         if 'condensates' not in analysis_grp:
-            cond_lst = gen_condensate_track_info(h5_data)
+            cond_lst = gen_condensate_track_info(time_arr, contact_cond_edges,
+                                                 contact_cond_num)
         else:
             cond_lst = extract_condensates(analysis_grp['condensates'])
 
         plot_condensate_size_vs_time(ax, time_arr, cond_lst,
                                      same_start_flag=True, color='k', alpha=.1)
+
 
     ##########################################
 if __name__ == "__main__":
