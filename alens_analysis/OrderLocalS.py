@@ -5,7 +5,7 @@ import numpy as np
 import scipy as sp
 import h5py
 
-import AMSOS as am
+import Util.AMSOS as am
 import point_cloud.PointCloud as pc
 
 # overwrite existing file

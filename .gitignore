@@ -1,5 +1,6 @@
 # ignore test data
 .vscode/
+.vscode/**
 result*-*/
 result/
 rdf_**/

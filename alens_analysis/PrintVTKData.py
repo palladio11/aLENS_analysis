@@ -1,24 +1,27 @@
-import sys
-import vtk
-import glob
-import re
+import Util.AMSOS as am
 
 
-# member variables are dynamically added by parsing data files
-# for Sylinder, Protein, and ConBlock classes
+SylinderFileList = am.getFileListSorted("./result*-*/Sylinder_*.pvtp")
+ProteinFileList = am.getFileListSorted("./result*-*/Protein_*.pvtp")
+ConBlockFileList = am.getFileListSorted("./result*-*/ConBlock_*.pvtp")
 
-class Sylinder(object):
-    end0 = None
-    end1 = None
-    pass
+print(SylinderFileList)
+print(ProteinFileList)
+print(ConBlockFileList)
 
+assert len(SylinderFileList) == len(ConBlockFileList)
+assert len(SylinderFileList) == len(ProteinFileList)
 
-class Protein(object):
-    end0 = None
-    end1 = None
-    pass
+# example, print 5 files
+for f in (SylinderFileList[:5]):
+    frame = am.FrameVTK(f)
+    frame.printData()
 
+for f in (ProteinFileList[:5]):
+    frame = am.FrameVTK(f)
+    frame.printData()
 
+<<<<<<< HEAD:alens_analysis/PrintVTKData.py
 class ConBlock(object):
     end0 = None
     end1 = None
@@ -139,3 +142,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+=======
+for f in (ConBlockFileList[:5]):
+    frame = am.FrameVTK(f)
+    frame.printData()
+>>>>>>> main:amsos_analysis/PrintVTKData.py
