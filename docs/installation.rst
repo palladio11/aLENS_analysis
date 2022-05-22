@@ -12,7 +12,7 @@ To install AMSOS analysis, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install amsos_analysis
+    $ pip install alens_analysis
 
 This is the preferred method to install AMSOS analysis, as it will always install the most recent stable release.
 
@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/lamsoa729/amsos_analysis
+    $ git clone git://github.com/lamsoa729/alens_analysis
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/lamsoa729/amsos_analysis/tarball/master
+    $ curl  -OL https://github.com/lamsoa729/alens_analysis/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/lamsoa729/amsos_analysis
-.. _tarball: https://github.com/lamsoa729/amsos_analysis/tarball/master
+.. _Github repo: https://github.com/lamsoa729/alens_analysis
+.. _tarball: https://github.com/lamsoa729/alens_analysis/tarball/master

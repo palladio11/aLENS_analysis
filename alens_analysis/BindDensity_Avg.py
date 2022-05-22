@@ -1,4 +1,4 @@
-import Util.AMSOS as am
+import Util.aLENS as am
 import glob
 from numpy.lib.recfunctions import structured_to_unstructured
 import numpy as np

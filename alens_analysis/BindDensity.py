@@ -2,8 +2,8 @@ from numpy.lib.recfunctions import structured_to_unstructured
 import numpy as np
 import matplotlib.pyplot as plt
 import json as js
-from Util.AMSOS import ParamBase, check_inline, normalize, point_line_proj
-import Util.AMSOS as am
+from Util.aLENS import ParamBase, check_inline, normalize, point_line_proj
+import Util.aLENS as am
 import dask.distributed as dd
 import matplotlib
 matplotlib.use('Agg')

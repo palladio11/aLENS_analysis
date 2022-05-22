@@ -16,8 +16,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from amsos_analysis import register_cmaps
-from amsos_analysis import TYPE_FUNC_DICT
+from alens_analysis import register_cmaps
+from alens_analysis import TYPE_FUNC_DICT
 # from .chrom_analysis import get_pos_kymo_data, get_pos_cond_data
 
 

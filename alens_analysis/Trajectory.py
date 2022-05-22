@@ -5,7 +5,7 @@ import scipy.optimize as so
 import matplotlib.pyplot as plt
 from numpy.lib.recfunctions import structured_to_unstructured
 
-import Util.AMSOS as am
+import Util.aLENS as am
 import Util.HDF5_Wrapper as h5
 
 param = am.ParamBase('Calculate net displacement along certain direction')

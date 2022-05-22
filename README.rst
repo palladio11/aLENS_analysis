@@ -1,29 +1,29 @@
 ==============
-AMSOS analysis
+alens analysis
 ==============
 
 
-.. image:: https://img.shields.io/pypi/v/amsos_analysis.svg
-        :target: https://pypi.python.org/pypi/amsos_analysis
+.. image:: https://img.shields.io/pypi/v/alens_analysis.svg
+        :target: https://pypi.python.org/pypi/alens_analysis
 
-.. image:: https://img.shields.io/travis/lamsoa729/amsos_analysis.svg
-        :target: https://travis-ci.org/lamsoa729/amsos_analysis
+.. image:: https://img.shields.io/travis/lamsoa729/alens_analysis.svg
+        :target: https://travis-ci.org/lamsoa729/alens_analysis
 
-.. image:: https://codecov.io/gh/lamsoa729/amsos_analysis/branch/master/graph/badge.svg
-        :target: https://codecov.io/gh/lamsoa729/amsos_analysis
+.. image:: https://codecov.io/gh/lamsoa729/alens_analysis/branch/master/graph/badge.svg
+        :target: https://codecov.io/gh/lamsoa729/alens_analysis
 
-.. image:: https://readthedocs.org/projects/amsos-analysis/badge/?version=latest
-        :target: https://amsos-analysis.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/alens-analysis/badge/?version=latest
+        :target: https://alens-analysis.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
 
 
 
-Classes, functions, and interface to analyze results from the AMSOS software package.
+Classes, functions, and interface to analyze results from the alens software package.
 
 
 * Free software: Apache Software License 2.0
-* Documentation: https://amsos-analysis.readthedocs.io.
+* Documentation: https://alens-analysis.readthedocs.io.
 
 
 Features

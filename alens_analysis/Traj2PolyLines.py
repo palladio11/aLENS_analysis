@@ -8,7 +8,7 @@ import h5py
 import glob
 import pyvista as pv
 import vtk
-import Util.AMSOS as am
+import Util.aLENS as am
 from codetiming import Timer
 
 h5name = 'Trajectory'

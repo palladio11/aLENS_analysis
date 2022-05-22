@@ -1,4 +1,4 @@
-import Util.AMSOS as am
+import Util.aLENS as am
 import numpy as np
 import scipy as sp
 import scipy.optimize as so

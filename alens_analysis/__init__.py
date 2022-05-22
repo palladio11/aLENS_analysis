@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Top-level package for AMSOS analysis."""
+"""Top-level package for aLENS analysis."""
 
 __author__ = """Adam Reay Lamson"""
 __email__ = 'alamson@flatironinstitute.org'

@@ -13,7 +13,7 @@ from vtk.util.numpy_support import vtk_to_numpy
 import yaml
 import numba as nb
 
-import AMSOS
+import aLENS
 
 
 @nb.njit

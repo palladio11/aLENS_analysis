@@ -1,8 +1,8 @@
 import numba as nb
 import numpy as np
-import Util.AMSOS as am
+import Util.aLENS as am
 import Util.HDF5_Wrapper as h5
-from Util.AMSOS import ParamBase, check_inline, normalize, point_line_proj
+from Util.aLENS import ParamBase, check_inline, normalize, point_line_proj
 from numpy.lib.recfunctions import structured_to_unstructured
 
 

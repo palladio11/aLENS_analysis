@@ -1,6 +1,6 @@
 import numba as nb
 import numpy as np
-import Util.AMSOS as am
+import Util.aLENS as am
 import Util.HDF5_Wrapper as h5
 from numpy.lib.recfunctions import structured_to_unstructured
 

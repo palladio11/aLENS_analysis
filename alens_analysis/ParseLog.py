@@ -2,7 +2,7 @@ import numpy as np
 import re
 from datetime import datetime
 
-import Util.AMSOS as am
+import Util.aLENS as am
 
 parser = am.getDefaultArgParser('Parse log file')
 parser.add_argument('--logfile', type=str, dest='logfile',

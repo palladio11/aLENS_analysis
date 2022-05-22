@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = python -msphinx
-SPHINXPROJ    = amsos_analysis
+SPHINXPROJ    = alens_analysis
 SOURCEDIR     = .
 BUILDDIR      = _build
 

@@ -8,7 +8,7 @@ import numba as nb
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import Util.AMSOS as am
+import Util.aLENS as am
 
 pbcL = 600  # um
 Ngrid = int(pbcL/0.1)+1

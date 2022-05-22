@@ -5,9 +5,9 @@ import scipy.optimize as so
 import matplotlib.pyplot as plt
 import h5py
 
-import Util.AMSOS as am
+import Util.aLENS as am
 import Util.HDF5_Wrapper as amh5
-from Util.AMSOS import ParamBase
+from Util.aLENS import ParamBase
 
 
 class Param(ParamBase):

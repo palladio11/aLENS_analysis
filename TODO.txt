@@ -1,3 +1,0 @@
-1. update OrderYZ/OrderX
-2. use hdf5 for all data storage
-3. remove hardcoded input-output file locations

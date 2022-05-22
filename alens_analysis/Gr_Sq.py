@@ -5,7 +5,7 @@ import scipy.special as ss
 
 import os
 
-import Util.AMSOS as am
+import Util.aLENS as am
 import Util.HDF5_Wrapper as h5
 import point_cloud.PointCloud as pc
 

@@ -6,7 +6,7 @@ import itertools as itt
 import sklearn.cluster as skc  # density based method
 import networkx as nx   # connectivity based method
 
-import Util.AMSOS as am
+import Util.aLENS as am
 import Util.HDF5_Wrapper as h5
 import point_cloud.PointCloud as pc
 

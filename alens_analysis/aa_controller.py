@@ -31,7 +31,7 @@ def parse_args():
     # chrom_parser = subparsers.add_parser
 
     parser.add_argument("-p", "--path", default=".",
-                        help="Path used in AMSOS Analysis functions.")
+                        help="Path used in aLENS Analysis functions.")
     parser.add_argument('-i', "--image_input", default=None,
                         help="Image parameter yaml file")
 

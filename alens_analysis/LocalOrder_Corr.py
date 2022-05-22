@@ -5,7 +5,7 @@ from numpy.lib.recfunctions import structured_to_unstructured
 import pyvista as pv
 from codetiming import Timer
 
-import Util.AMSOS as am
+import Util.aLENS as am
 
 parser = am.getDefaultArgParser('compute correlation')
 parser.add_argument('--nbins', type=int, dest='nbins', default=40,
