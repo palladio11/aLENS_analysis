@@ -8,6 +8,8 @@ Description:
 """
 
 import numpy as np
+import yaml
+import h5py
 
 
 def get_drag_coeff(bead_rad, viscosity):
@@ -37,6 +39,22 @@ def get_link_relax_time(bead_rad, viscosity, spring_const):
 
 def get_pfract(n_chrom, rad_chrom, n_crowd, rad_crowd, rad_sys):
     return (n_chrom * (rad_chrom**3) + n_crowd * (rad_crowd**3)) / (rad_sys**3)
+
+
+def get_fundamental_consts(data_path):
+    with h5py.File(next(data_path.glob('analysis/*.h5')), 'r+') as h5_data:
+        rc_dict = yaml.safe_load(h5_data.attrs['RunConfig'])
+        # p_dict = yaml.safe_load(h5_data.attrs['ProteinConfig'])
+        ks = float(rc_dict['linkKappa'])
+        visc = float(rc_dict['viscosity'])
+        kbT = float(rc_dict['KBT'])
+        diam = float(rc_dict['sylinderDiameter'])
+        nbeads = h5_data['raw_data']['sylinders'].shape[0]
+        const_dict = {'drag_coeff': get_drag_coeff(diam * .5, visc),
+                      'bead_diff_time': get_char_time(diam, visc, kbT),
+                      'rouse_time': get_rouse_time(nbeads, diam, visc, kbT),
+                      'link_relax_time': get_link_relax_time(diam * .5, visc, ks)}
+        return const_dict
 
 
 ##########################################

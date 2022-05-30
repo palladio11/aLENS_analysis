@@ -19,37 +19,11 @@ from .read_func import convert_dat_to_hdf
 from .chromatin.hic_animation import hic_animation
 from .min_animation import min_animation
 from .result_to_pvd import make_pvd_files
+from .runlog_funcs import get_walltime
 
 MOVIE_DICT = {'hic': hic_animation,
               'min': min_animation,
               }
-
-
-def get_walltime(log_path):
-    """Uses the log file to calculate the total time the simulation took.
-    This will not work for restarted simulations. Might want to fix that.
-
-    @param log_path TODO
-    @return: TODO
-
-    """
-    with open(log_path, 'r') as rlf:
-        pattern = re.compile(r'\[(\d+-\d+-\d+\s\d+:\d+:\d+\.\d+)\]')
-        line = rlf.readline()
-        while not pattern.search(line):
-            line = rlf.readline()
-        start_wtime = pattern.search(line).group(0)
-
-        for line in reversed(rlf.readlines()):
-            if not pattern.search(line):
-                continue
-            end_wtime = pattern.search(line).group(0)
-            break
-
-    stripstr = '[%Y-%m-%d %H:%M:%S.%f]'
-    end_dt = datetime.strptime(end_wtime, stripstr)
-    start_dt = datetime.strptime(start_wtime, stripstr)
-    return end_dt - start_dt
 
 
 def make_seed_graphs(opts):
