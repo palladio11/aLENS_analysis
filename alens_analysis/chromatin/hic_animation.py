@@ -19,11 +19,11 @@ import yaml
 from numba import jit, vectorize
 import argparse
 
-from .objects import filament
-from .read_func import (read_dat_sylinder,
-                        get_file_number,
-                        get_png_number,
-                        count_fils)
+from ..objects import filament
+from ..read_func import (read_dat_sylinder,
+                         get_file_number,
+                         get_png_number,
+                         count_fils)
 
 
 SQRT2 = np.sqrt(2)

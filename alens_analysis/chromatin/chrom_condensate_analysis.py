@@ -10,7 +10,7 @@ Description:
 import numpy as np
 import warnings
 
-from .helpers import gen_id
+from ..helpers import gen_id
 
 
 class Condensate(object):

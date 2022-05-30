@@ -15,7 +15,7 @@ import numpy as np
 import scipy.stats as stats
 from scipy.signal import savgol_filter
 
-from .helpers import contiguous_regions
+from ..helpers import contiguous_regions
 
 
 def gauss_weighted_contact(sep_mat, sigma=.020, radius_arr=None):
