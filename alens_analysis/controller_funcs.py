@@ -13,7 +13,8 @@ import shutil
 
 from datetime import datetime
 from .chrom_graph_funcs import (make_all_condensate_graphs)
-from .chrom_seed_scan_graph_funcs import (make_all_seed_scan_condensate_graphs)
+from .chrom_seed_scan_graph_funcs import (
+    make_all_seed_scan_condensate_graphs)
 from .read_func import convert_dat_to_hdf
 from .hic_animation import hic_animation
 from .min_animation import min_animation
