@@ -9,6 +9,9 @@ Description:
 
 import numpy as np
 import warnings
+from sklearn.cluster import MeanShift, estimate_bandwidth, DBSCAN, OPTICS
+from numba import jit
+
 
 from ..helpers import gen_id
 
@@ -297,6 +300,32 @@ def get_auto_corr_fast(pos_arr):
 
     pos_corr /= 4 * n
     return pos_corr
+
+
+def identify_spatial_clusters(com_arr, eps=0.05, min_samples=15, thresh=20):
+    clust = OPTICS(min_samples=15, eps=0.05,
+                   min_cluster_size=100, cluster_method='dbscan')
+    clust.fit(com_arr)
+    labels = clust.labels_
+
+    # Number of clusters in labels, ignoring noise if present.
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise_ = list(labels).count(-1)
+
+    print("number of estimated clusters : %d" % n_clusters_)
+
+    # Collect a list of cluster centers and the list of their labels
+    cluster_centers = []
+    cluster_label_inds = []
+    for k in range(n_clusters_):
+        cli = np.where(labels == k)[0]
+        if cli.size < thresh:
+            continue
+        cluster_label_inds += [cli]
+        cluster_centers += [com_arr[cli, :].mean(axis=0)]
+    print("number of thresholded clusters : %d" % len(cluster_centers))
+
+    return clust, cluster_centers, cluster_label_inds
 
 
 ##########################################
