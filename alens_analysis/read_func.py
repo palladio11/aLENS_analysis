@@ -24,7 +24,11 @@ def get_file_number(path):
 def get_png_number(path):
     name = path.stem
     num = name.split(".")[1]
-    return int(num)
+    try:
+        return int(num)
+    except BaseException:
+        print("Could not find the number of frame using 'image.<num>.png'.",
+              " Make sure to delete any other files in the PNG folder (even the hidden ones).")
 
 
 def count_fils(path):

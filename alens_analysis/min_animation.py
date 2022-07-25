@@ -56,12 +56,12 @@ def min_animation(opts):
         opts.params['time_step'] = run_params['timeSnap']
 
     result_dir = opts.result_dir
-    png_paths = sorted(result_dir.glob("PNG/*.png"),
+    png_paths = sorted(result_dir.glob("PNG/image*.png"),
                        key=get_png_number)[::opts.params['n_graph']]
 
     nframes = len(png_paths)
     print(nframes)
-    fig, ax = plt.subplots(figsize=(20, 8))
+    fig, ax = plt.subplots(figsize=(16, 8))
     writer = FFMpegWriter(
         fps=opts.params['fps'],
         codec='libx264',

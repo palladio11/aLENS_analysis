@@ -26,10 +26,6 @@ def parse_args():
         prog='aa_controller.py',
         formatter_class=argparse.RawTextHelpFormatter)
 
-    # TODO: Implement subparser if necessary <26-02-21, ARL> #
-    # subparsers = parser.add_subparsers(title="Simulation types")
-    # chrom_parser = subparsers.add_parser
-
     parser.add_argument("-p", "--path", default=".",
                         help="Path used in aLENS Analysis functions.")
     parser.add_argument('-i', "--image_input", default=None,
@@ -81,7 +77,7 @@ def parse_args():
         plt.rcParams['image.cmap'] = opts.colormap
 
     opts.params = {
-        'n_graph': 5,
+        'n_graph': 1,
         'fps': 20,
         # 'n_graph': 1,
         # 'fps': 2,

@@ -15,6 +15,9 @@ import numpy as np
 import scipy.stats as stats
 from scipy.signal import savgol_filter
 
+# Clustering stuff
+from itertools import cycle
+
 from ..helpers import contiguous_regions
 
 
@@ -154,7 +157,8 @@ def get_pos_kymo_data(h5_data, ts_range=(0, None), bead_range=(0, None), bins=10
 
 def get_contact_cond_data(time_arr, contact_kymo, threshold,
                           bead_win=0, time_win=0, analysis=None):
-    """TODO: Docstring for get_contact_cond_data.
+    """Given a contact kymo graph, finds condensates by regions that are above
+    a certain contact threshold. This is done for every time point.
 
     @param time_arr TODO
     @param contact_kymo TODO
@@ -194,11 +198,11 @@ def get_contact_cond_data(time_arr, contact_kymo, threshold,
 
 
 def smooth_kymo_mat(mat, y_win=0, time_win=0):
-    """TODO: Docstring for smooth_mat.
+    """Smooth out a contact kymograph using a Savitzky–Golay filter
 
-    @param mat TODO
-    @param x_win TODO
-    @param y_win TODO
+    @param mat Matrix that you want to smooth
+    @param y_win Smoothing window in the bead index dimension
+    @param time_win Smoothing window in the time dimension
     @return: TODO
 
     """
@@ -435,7 +439,7 @@ def rad_distr_hists(pos_mat, zero_pos, nbins=100, hist_max=1.):
 
 
 def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1):
-    """TODO: Docstring for cylindrical histogram.
+    """ Get the radial distribution function for a selection of beads
     @param pos_mat TODO
     @param nbins TODO
     @return: TODO
@@ -446,9 +450,10 @@ def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1):
             0, hist_max], density=False)
     dr = rad_bin_edges[1:] - rad_bin_edges[:-1]
     rad = .5 * (rad_bin_edges[1:] + rad_bin_edges[:-1])
+    rad_distr_func = np.array(rad_distr_func, dtype=float)
 
     rad_distr_func /= 2. * np.pi * np.power(rad, 2) * dr * orig_density
-    return (rad_distr_func, rad_bin_edges)
+    return (rad_distr_func, rad)
 
 
 def get_all_rog_stats(pos_mat, rel_ind=0):
@@ -463,9 +468,35 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
     return(pos_avg_arr, pos_std_arr, rad_mean_arr, rad_std_arr)
 
 
-def get_contact_mat_analysis(
-        com_arr, sigma=.02, avg_block_step=1, log=True, radius_arr=None, analysis=None):
+def get_contact_mat_analysis(com_arr, sigma=.02, avg_block_step=1, log=True,
+                             radius_arr=None, analysis=None):
+    """Generate (and store if given an HDF5 directory) all analysis related to 
+    contact matrices related to chromatin. This is includes separation matrix at 
+    every time point (this is not stored because of the size), average contact 
+    matrix, and contact kymograph.
+
+    Parameters
+    ----------
+    com_arr : NxDxT ndarray
+        Matrix of particles centers of masses 
+    sigma : float, optional
+        _description_, by default .02
+    avg_block_step : int, optional
+        _description_, by default 1
+    log : bool, optional
+        _description_, by default True
+    radius_arr : _type_, optional
+        _description_, by default None
+    analysis : _type_, optional
+        _description_, by default None
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
     reduc_com_arr = com_arr[::avg_block_step, :, :]  # simple downsampling
+
     sep_mat = np.linalg.norm(
         reduc_com_arr[:, np.newaxis, :, :] - reduc_com_arr[np.newaxis, :, :, :], axis=2)
     # log_contact_mat = log_gauss_weighted_contact(sep_mat, sigma)
