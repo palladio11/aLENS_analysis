@@ -15,6 +15,8 @@ from numba import jit
 
 from ..helpers import gen_id
 
+# XXX This might be depricated soon
+
 
 class Condensate(object):
     def __init__(self, id, edge_info, merged_from=None, split_from=None):
@@ -302,9 +304,8 @@ def get_auto_corr_fast(pos_arr):
     return pos_corr
 
 
-def identify_spatial_clusters(com_arr, eps=0.05, min_samples=15, thresh=20):
-    clust = OPTICS(min_samples=15, eps=0.05,
-                   min_cluster_size=100, cluster_method='dbscan')
+def identify_spatial_clusters(com_arr, eps=0.05, min_samples=12, thresh=20, verbose=True):
+    clust = OPTICS(min_samples=min_samples, eps=eps, cluster_method='dbscan')
     clust.fit(com_arr)
     labels = clust.labels_
 
@@ -312,7 +313,8 @@ def identify_spatial_clusters(com_arr, eps=0.05, min_samples=15, thresh=20):
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
     n_noise_ = list(labels).count(-1)
 
-    print("number of estimated clusters : %d" % n_clusters_)
+    if verbose:
+        print("number of estimated clusters : %d" % n_clusters_)
 
     # Collect a list of cluster centers and the list of their labels
     cluster_centers = []
@@ -323,7 +325,8 @@ def identify_spatial_clusters(com_arr, eps=0.05, min_samples=15, thresh=20):
             continue
         cluster_label_inds += [cli]
         cluster_centers += [com_arr[cli, :].mean(axis=0)]
-    print("number of thresholded clusters : %d" % len(cluster_centers))
+    if verbose:
+        print("number of thresholded clusters : %d" % len(cluster_centers))
 
     return clust, cluster_centers, cluster_label_inds
 

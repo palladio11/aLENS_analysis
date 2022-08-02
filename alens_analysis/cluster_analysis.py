@@ -30,13 +30,22 @@ class Cluster:
     Used in a cluster history tree to track a cluster through time.
     """
 
-    def __init__(self, id, time, part_ids):
+    def __init__(self, id=-1, time=-1, part_ids=[], center=[], h5_data=None):
         self.id = id
         self.time = time
         self.part_ids = part_ids
+        self.center = center
+
+        if h5_data is not None:
+            self.read_clust_from_hdf5_dset(h5_data)
 
         self.descendant = None
-        self.progenitors = []  # List of tuples of time and cluster to compare against
+        self.progenitors = []  # List of cluster objects to compare against
+        self.mass_hist = 0
+
+        # Possible descendants
+        # self.poss_descendants = []  # List of tuples of time and cluster to compare against
+
         # Variables for searching history
         # self.first_progenitor = None
         # self.next_progenitor = None
@@ -44,11 +53,6 @@ class Cluster:
         # self.main_leaf_progenitor = None
         # self.root_descendant = None
         # self.clust_tree = None
-
-        self.mass_hist = 0
-
-        # Possible descendants
-        # self.poss_descendants = []  # List of tuples of time and cluster to compare against
 
     def get_root(self):
         if self.root_descendant is not None:
@@ -60,10 +64,6 @@ class Cluster:
             self.root_descendant = self.descendant.get_root()
             return self.root_descendant
 
-    # def get_main_leaf_prog(self):
-    #     return (self.main_leaf_progenitor if not self.main_leaf_progenitor is None
-    #             else self.first_progenitor.get_main_leaf_prog())
-
     def compare(self, cluster_b):
         return len(set(self.part_ids).intersection(set(cluster_b.part_ids)))
 
@@ -74,6 +74,18 @@ class Cluster:
             cur = cur.progenitors[0]
             main_progs += [cur]
         return main_progs
+
+    def read_clust_from_hdf5_dset(self, h5_dset):
+        self.id = h5_dset.attrs['id']
+        self.time = h5_dset.attrs['time']
+        self.center = h5_dset.attrs['center'][...]
+        self.part_ids = h5_dset[...]
+
+    def write_clust_to_hdf5_dset(self, h5_grp):
+        dset = h5_grp.create_dataset(f'clust_{self.id}', data=self.part_ids)
+        dset.attrs['id'] = self.id
+        dset.attrs['time'] = self.time
+        dset.attrs['center'] = self.center
 
 
 class ClusterTree(object):
@@ -94,15 +106,6 @@ class ClusterTree(object):
 
         clust.progenitors.sort(key=lambda x: x.mass_hist, reverse=True)
         clust.mass_hist += len(clust.part_ids)
-
-        # clust.main_leaf_progenitor = clust.get_main_leaf_prog()
-        # next_prog = clust.next_progenitor
-        # while(not next_prog is None):
-        #     self.add_recursive(next_prog)
-        #     next_prog = clust.next_progenitor
-
-        # clust.last_progenitor = self.clusters[-1]
-        # clust.visited = True
 
     def get_main_clust_branch(self):
         if self.main_clust_branch:
@@ -146,6 +149,7 @@ def find_descendants(clusters, thresh=.6, nskip=1):
         for cur in clusters[i]:  # cur = current cluster
             best_score = 0
             best_cand = None
+            cand_size = 0
             # Look at clusters 1 snapshot ahead and find descendant
             for s in range(1, nskip+1):
                 for cand in clusters[i+s]:  # cand = descendant candidate cluster
@@ -153,8 +157,9 @@ def find_descendants(clusters, thresh=.6, nskip=1):
                     if score > best_score:
                         best_score = score
                         best_cand = cand
+                        cand_size = len(cand.part_ids)
                 # If you have found a cluster that is over the threshold, make it the descendant of current node. Break out of skipping loop
-                if best_score > thresh * len(cur.part_ids):
+                if best_score > thresh * min(len(cur.part_ids), cand_size):
                     cur.descendant = best_cand
                     best_cand.progenitors += [cur]
                     assert(best_cand != cur)
