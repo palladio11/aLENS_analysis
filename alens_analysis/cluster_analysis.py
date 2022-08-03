@@ -40,6 +40,7 @@ class Cluster:
             self.read_clust_from_hdf5_dset(h5_data)
 
         self.descendant = None
+        # self.descendants = [] # List of cluster objects to compare against
         self.progenitors = []  # List of cluster objects to compare against
         self.mass_hist = 0
 
@@ -53,6 +54,12 @@ class Cluster:
         # self.main_leaf_progenitor = None
         # self.root_descendant = None
         # self.clust_tree = None
+
+    def reset_history(self):
+        self.descendant = None
+        # self.descendants = [] # List of cluster objects to compare against
+        self.progenitors = []  # List of cluster objects to compare against
+        self.mass_hist = 0
 
     def get_root(self):
         if self.root_descendant is not None:
@@ -144,6 +151,9 @@ class AllClusterTrees(object):
 
 
 def find_descendants(clusters, thresh=.6, nskip=1):
+    for t in clusters:
+        for clust in t:
+            clust.reset_history()
     root_clusters = []
     for i in range(len(clusters)-1):
         for cur in clusters[i]:  # cur = current cluster
@@ -158,7 +168,9 @@ def find_descendants(clusters, thresh=.6, nskip=1):
                         best_score = score
                         best_cand = cand
                         cand_size = len(cand.part_ids)
-                # If you have found a cluster that is over the threshold, make it the descendant of current node. Break out of skipping loop
+                # If you have found a cluster that is over the threshold,
+                # make it the descendant of current node.
+                # Break out of skipping loop
                 if best_score > thresh * min(len(cur.part_ids), cand_size):
                     cur.descendant = best_cand
                     best_cand.progenitors += [cur]
