@@ -20,6 +20,7 @@ rdf_**/
 __pycache__/
 *.py[cod]
 *$py.class
+notebooks/*-jvsc-*.ipynb
 
 # C extensions
 *.so
