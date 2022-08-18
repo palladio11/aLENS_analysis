@@ -434,7 +434,7 @@ def rad_distr_hists(pos_mat, zero_pos, nbins=100, hist_max=1.):
     return (rad_hist, rad_bin_edges)
 
 
-def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1):
+def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1.):
     """TODO: Docstring for cylindrical histogram.
     @param pos_mat TODO
     @param nbins TODO
@@ -446,8 +446,8 @@ def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1):
             0, hist_max], density=False)
     dr = rad_bin_edges[1:] - rad_bin_edges[:-1]
     rad = .5 * (rad_bin_edges[1:] + rad_bin_edges[:-1])
-
-    rad_distr_func /= 2. * np.pi * np.power(rad, 2) * dr * orig_density
+    rad_distr_func = np.divide(
+        rad_distr_func,  np.pi * np.power(rad, 2.) * dr * orig_density * dist_mat.size)
     return (rad_distr_func, rad_bin_edges)
 
 

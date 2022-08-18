@@ -742,9 +742,12 @@ def plot_condensate_avg_contact_vs_time(ax, time_arr, contact_kymo, cond_lst,
     ax.set_ylabel('Avg contact probability (bead$^{-1}$)')
 
 
-def graph_clust_snapshot(axarr, com_arr, clust, cluster_centers, cluster_member_inds):
-    colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+def graph_clust_snapshot(fig, axarr, com_arr, clust, cluster_centers, cluster_member_inds):
     n_clusters = len(cluster_centers)
+    colors = [plt.cm.Spectral(each)
+              for each in np.linspace(0, 1, n_clusters)]
+
+    labels = clust.labels_
 
     _ = axarr[0].scatter(com_arr[:, 0], com_arr[:, 1])
     _ = axarr[1].scatter(com_arr[:, 0], com_arr[:, 2])
@@ -779,6 +782,8 @@ def graph_clust_snapshot(axarr, com_arr, clust, cluster_centers, cluster_member_
     _ = axarr[3].set_ylabel('Z ($\mu$m)')
     for ax in axarr:
         _ = ax.set_aspect(1)
+
+    return fig, axarr
 
 
 ##########################################

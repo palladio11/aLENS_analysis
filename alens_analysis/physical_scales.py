@@ -13,7 +13,7 @@ import h5py
 
 
 def get_drag_coeff(bead_rad, viscosity):
-    ''' Dimensions of Length/(Time*Force) = Length^2/(Time*Energy)'''
+    ''' Drag coefficient of a sphere of radius bead_rad in a viscous fluid using Stokes-Einstein relations. Dimensions of Length/(Time*Force) = Length^2/(Time*Energy)'''
     return 6. * np.pi * viscosity * bead_rad
 
 
@@ -38,11 +38,31 @@ def get_link_relax_time(bead_rad, viscosity, spring_const):
 
 
 def get_pfract(n_chrom, rad_chrom, n_crowd, rad_crowd, rad_sys):
+    """Packing fraction calculation. 
+
+    Parameters
+    ----------
+    n_chrom : int
+        Number of filaments
+    rad_chrom : float
+        Radius of the beads in the filament
+    n_crowd : int
+        Number of crowding particles
+    rad_crowd : float
+        Radius of the crowding particles
+    rad_sys : float
+        Radius of the confining sphere
+
+    Returns
+    -------
+    float
+        Packing fraction of the beads to total space available.
+    """
     return (n_chrom * (rad_chrom**3) + n_crowd * (rad_crowd**3)) / (rad_sys**3)
 
 
-def get_fundamental_consts(data_path):
-    with h5py.File(next(data_path.glob('analysis/*.h5')), 'r+') as h5_data:
+def get_fundamental_consts(h5_path):
+    with h5py.File(h5_path, 'r+') as h5_data:
         rc_dict = yaml.safe_load(h5_data.attrs['RunConfig'])
         # p_dict = yaml.safe_load(h5_data.attrs['ProteinConfig'])
         ks = float(rc_dict['linkKappa'])

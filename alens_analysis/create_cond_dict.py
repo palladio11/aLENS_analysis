@@ -41,7 +41,7 @@ def create_cluster_hdf5(anal_file_path, ss_ind=1, end_ind=-1, start_bead=0,
             time_grp = clust_grp.create_group(f'time_{t}')
             time_grp.attrs['time'] = t
             clust, cluster_centers, cluster_label_inds = identify_spatial_clusters(
-                com_arr[:, :, i], thresh=40)
+                com_arr[:, :, i], thresh=20)
             for cli, cc in zip(cluster_label_inds, cluster_centers):
                 cluster = Cluster(next(id_gen), t, cli, cc)
                 cluster.write_clust_to_hdf5_dset(time_grp)
