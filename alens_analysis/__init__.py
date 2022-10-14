@@ -24,7 +24,6 @@ from .rouse_mode_analysis import (get_rouse_modes_at_t,
                                   get_rouse_mode_corr,
                                   get_rouse_mode_corr_fast,)
 
-from . import create_cond_dict
 from . import chromatin
 from . import helpers
 

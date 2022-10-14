@@ -20,6 +20,7 @@ from .chromatin.hic_animation import hic_animation
 from .min_animation import min_animation
 from .result_to_pvd import make_pvd_files
 from .runlog_funcs import get_walltime
+from .cluster_analysis import create_cluster_hdf5
 
 MOVIE_DICT = {'hic': hic_animation,
               'min': min_animation,
@@ -74,25 +75,18 @@ def seed_analysis(opts):
              directory
 
     """
+    h5_raw_path = opts.analysis_dir / f'raw_{opts.path.stem}.h5'
     if opts.analysis == 'collect':
-        # make_pvd_files(opts.result_dir)
         t0 = time.time()
-        h5_path = opts.analysis_dir / f'{opts.path.stem}.h5'
-        print(f'{opts.path.stem}')
-        h5_data = convert_dat_to_hdf(h5_path, opts.path)
-        print(f" HDF5 created in {time.time() - t0}")
-        # Check to see if run.log is present in current simulation
-        # Wall time analysis
-        if (opts.path / 'run.log').exists():
-            dwtime = get_walltime(opts.path / 'run.log')
-            h5_data.attrs['total_seconds'] = dwtime.total_seconds()
-            h5_data.attrs['walltime'] = str(dwtime)
-        try:
-            h5_data.flush()
-            h5_data.close()
-        except BaseException:
-            print("Could not close h5_data file")
-            pass
+        print(f'raw_{opts.path.stem}')
+        convert_dat_to_hdf(h5_raw_path, opts.path)
+        print(f" HDF5 raw created in {time.time() - t0}")
+
+    if opts.analysis == 'cluster':
+        t0 = time.time()
+        create_cluster_hdf5(h5_raw_path, force=opts.force,
+                            verbose=opts.verbose)
+        print(f" HDF5 cluster file created in {time.time() - t0}")
 
     if opts.movie:
         MOVIE_DICT[opts.movie](opts)

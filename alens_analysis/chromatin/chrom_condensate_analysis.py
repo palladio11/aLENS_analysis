@@ -12,8 +12,7 @@ import warnings
 from sklearn.cluster import MeanShift, estimate_bandwidth, DBSCAN, OPTICS
 from numba import jit
 
-
-from ..helpers import gen_id
+from alens_analysis.helpers import gen_id
 
 # XXX This might be depricated soon
 
@@ -302,33 +301,6 @@ def get_auto_corr_fast(pos_arr):
 
     pos_corr /= 4 * n
     return pos_corr
-
-
-def identify_spatial_clusters(com_arr, eps=0.05, min_samples=12, thresh=20, verbose=True):
-    clust = OPTICS(min_samples=min_samples, eps=eps, cluster_method='dbscan')
-    clust.fit(com_arr)
-    labels = clust.labels_
-
-    # Number of clusters in labels, ignoring noise if present.
-    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    n_noise_ = list(labels).count(-1)
-
-    if verbose:
-        print("number of estimated clusters : %d" % n_clusters_)
-
-    # Collect a list of cluster centers and the list of their labels
-    cluster_centers = []
-    cluster_label_inds = []
-    for k in range(n_clusters_):
-        cli = np.where(labels == k)[0]
-        if cli.size < thresh:
-            continue
-        cluster_label_inds += [cli]
-        cluster_centers += [com_arr[cli, :].mean(axis=0)]
-    if verbose:
-        print("number of thresholded clusters : %d" % len(cluster_centers))
-
-    return clust, cluster_centers, cluster_label_inds
 
 
 ##########################################

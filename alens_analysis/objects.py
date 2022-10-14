@@ -18,6 +18,8 @@ import argparse
 class filament():
 
     def __init__(self, line):
+        if type(line) == bytes:
+            line = line.decode()
         self.info = line.split()
         self.fil_type = str(self.info[0])
         self.gid = int(self.info[1])
@@ -49,6 +51,8 @@ class filament():
 class protein():
 
     def __init__(self, line):
+        if type(line) == bytes:
+            line = line.decode()
         self.info = line.split()
         self.xlp_type = str(self.info[0])
         self.gid = int(self.info[1])

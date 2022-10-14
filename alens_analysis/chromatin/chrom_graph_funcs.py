@@ -786,6 +786,39 @@ def graph_clust_snapshot(fig, axarr, com_arr, clust, cluster_centers, cluster_me
     return fig, axarr
 
 
+def graph_cluster_and_tree_info_vs_time(axarr, time_arr, trees):
+    num_cluster_arr = np.zeros(time_arr.shape)
+    num_cluster_beads_arr = np.zeros(time_arr.shape)
+    for tree in trees:
+        time_lst = []
+        flat_time_lst = []
+        clust_ids = []
+        clust_centers = []
+        for clust in tree.clusters:
+            t_idx = np.where(time_arr == clust.time)
+            num_cluster_beads_arr[t_idx] += len(clust.part_ids)
+            time_lst += [clust.time]
+            clust_centers += [clust.center]
+
+            flat_time_lst += [clust.time]*len(clust.part_ids)
+            clust_ids += clust.part_ids.tolist()
+        _ = axarr[0, 0].scatter(time_lst, np.array(clust_centers)[:, 0])
+        _ = axarr[1, 0].scatter(flat_time_lst, clust_ids, s=.01, marker='.')
+
+    _ = axarr[0, 1].scatter(time_arr, num_cluster_arr)
+    _ = axarr[1, 1].scatter(time_arr, num_cluster_beads_arr)
+
+    _ = axarr[0, 0].set_ylabel('$x$-position ($\mu$m)')
+    _ = axarr[0, 1].set_ylabel('Number of clusters')
+    _ = axarr[1, 0].set_ylabel('Bead index')
+    _ = axarr[1, 1].set_ylabel('Number of beads in clusters')
+    for ax in axarr.flatten():
+        _ = ax.set_xlabel('Time (sec)')
+
+    _ = axarr[0, 1].set_ylim(0)
+    _ = axarr[1, 1].set_ylim(0)
+
+
 ##########################################
 if __name__ == "__main__":
     print("Not implemented")

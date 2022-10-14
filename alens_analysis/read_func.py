@@ -10,13 +10,17 @@ import h5py
 import re
 import yaml
 import vtk
+import time
 import numpy as np
 from pathlib import Path
+from tqdm import tqdm
 from .objects import filament, protein, con_block
+from .runlog_funcs import get_walltime
+import zipfile
 
 
 def get_file_number(path):
-    name = path.stem
+    name = Path(path).stem
     num = name.split("_")[-1]
     return int(num)
 
@@ -110,7 +114,7 @@ def read_dat_constraint(fpath):
     return con_blocks
 
 
-def read_time(fnames, h5_data):
+def read_time(fpaths, h5_data):
     """!Read in data from all protein files
 
     @param fnames: List posit file names
@@ -119,16 +123,16 @@ def read_time(fnames, h5_data):
 
     """
     t = []
-    for fn in fnames:
-        p = Path(fn).resolve()
-        with p.open(mode='r') as f:
+    for fp in tqdm(fpaths, disable=True):
+        # p = Path(fn).resolve()
+        with fp.open(mode='r') as f:
             t += [float(f.readlines()[1])]
     time_dset = h5_data.create_dataset('time', data=t)
     return time_dset
 
 
 # @profile
-def read_sylinder_data(tubule_fnames, posit_grp):
+def read_sylinder_data(syl_paths, posit_grp):
     """!Read in data from all tubule files
 
     @param tubule_fnames: List of tubule posit file names
@@ -136,32 +140,29 @@ def read_sylinder_data(tubule_fnames, posit_grp):
     @return: HDF5 data set containing tubule data
 
     """
-    nframes = len(tubule_fnames)
+    nframes = len(syl_paths)
     # Get number of tubules
-    with open(tubule_fnames[0], 'r') as fn:
-        ntubules = int(fn.readline())
+    with syl_paths[0].open('r') as sp:
+        n_syl = int(sp.readline())
     # Create dataset for MT info
     sy_dset = posit_grp.create_dataset('sylinders',
-                                       shape=(ntubules, 9, nframes))
-    sy_dset.attrs['ntubules'] = ntubules
+                                       shape=(n_syl, 9, nframes))
+    sy_dset.attrs['n_yslinders'] = n_syl
     sy_dset.attrs['axis dimensions'] = ['sylinders', 'state', 'frame']
     # Set tubule attribute: names of columns
     sy_dset.attrs['column labels'] = ['gid', 'radius',
                                       'minus pos x', 'minus pos y', 'minus pos z',
                                       'plus pos x', 'plus pos y', 'plus pos z',
                                       'group', ]
-    for frame, tfname in enumerate(tubule_fnames):
-        fpath = Path(tfname).resolve()
-        filaments = read_dat_sylinder(fpath)
-
+    for frame, syl_path in tqdm(enumerate(syl_paths), total=len(syl_paths), disable=True):
+        filaments = read_dat_sylinder(syl_path)
         data_arr = [fil.get_dat()
                     for fil in filaments if (fil.fil_type != 'L')]
-
         sy_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
     return sy_dset
 
 
-def read_protein_data(protein_fnames, posit_grp):
+def read_protein_data(xlp_paths, posit_grp):
     """!Read in data from all protein files
 
     @param protein_fnames: List of protein posit file names
@@ -169,10 +170,9 @@ def read_protein_data(protein_fnames, posit_grp):
     @return: HDF5 data set containing protein data
 
     """
-    nframes = len(protein_fnames)
-    p = Path(protein_fnames[0]).resolve()
-    with p.open(mode='r') as fn:
-        nproteins = int(fn.readline())
+    nframes = len(xlp_paths)
+    with xlp_paths[0].open(mode='r') as xp:
+        nproteins = int(xp.readline())
 
     # Create dataset for protein info (input shape)
     protein_dset = posit_grp.create_dataset('proteins',
@@ -186,23 +186,17 @@ def read_protein_data(protein_fnames, posit_grp):
                                            'end2 pos x', 'end2 pos y', 'end2 pos z',
                                            'end1 bindID', 'end2 bindID']
     # Loop over files adding to h5_data
-    for frame, pfname in enumerate(protein_fnames):
-        ppath = Path(pfname).resolve()
-        xlps = read_dat_xlp(ppath)
+    for frame, xlp_path in tqdm(enumerate(xlp_paths), total=len(xlp_paths), disable=True):
+        # for frame, xlp_path in enumerate(xlp_paths):
+        xlps = read_dat_xlp(xlp_path)
         data_arr = [p.get_dat() for p in xlps]
-        # with ppath.open(mode='r') as pf:
-        #     lines = pf.readlines()
-        #     data_arr = []
-        #     for line in lines[2:]:
-        #         data_arr += [line.split()[1:]]
-        #     protein_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
         protein_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
 
     return protein_dset
 
 
 def read_constraint_data(cons_fnames, h5_data):
-    """!Read in data from all tubule files
+    """!Read in data from constraint files
 
     @param cons_fnames: List constraint file names
     @param h5_data: HDF5 data file to add stress
@@ -210,15 +204,12 @@ def read_constraint_data(cons_fnames, h5_data):
 
     """
     nframes = len(cons_fnames)
-    # Get number of tubules
-    # with open(cons_fnames[0], 'r') as fn:
     bi_dset = h5_data.create_dataset('bilateral_stress',
                                      shape=(3, 3, nframes))
     col_dset = h5_data.create_dataset('collision_stress',
                                       shape=(3, 3, nframes))
     bi_dset.attrs['axis labels'] = ['dim', 'dim', 'frame']
     col_dset.attrs['axis labels'] = ['dim', 'dim', 'frame']
-    # Set tubule attribute: names of columns
     for frame, tfname in enumerate(cons_fnames):
         fpath = Path(tfname).resolve()
         con_blocks = read_dat_constraint(fpath)
@@ -233,48 +224,90 @@ def read_constraint_data(cons_fnames, h5_data):
     return bi_dset, col_dset
 
 
-def convert_dat_to_hdf(fname="TS_data.h5", path='.', store_stress=False):
-    """!TODO: Docstring for convert_dat_to_hdf.
+def convert_dat_to_hdf(fname="TS_data.h5", path=Path('.'), store_stress=False):
+    """Convert separate ascii and vtk data files into a single hdf5 file
 
-    @param fname: TODO
-    @return: TODO
+    Parameters
+    ----------
+    fname : str, optional
+        Name of the file to save, by default "TS_data.h5"
+    path : Path object, optional
+        The seed directory of the simulation, by default Path('.')
+    store_stress : bool, optional
+        Should you spend the space to store the stress calculated in the system, by default False
 
+    Raises
+    ------
+    OSError
+        If neither result.zip file or result directory do not exist, raise error.
     """
-    # assert path.exists()
-    result_dir = path / 'result'
+    # Always opt for using zip archive reading especially on ceph for speed
+    if (path / 'result.zip').exists():
+        result_zip = zipfile.ZipFile(path / 'result.zip')
+        result_path = zipfile.Path(path / 'result.zip')
+        is_zip = True
+    elif (path / 'result.zip').exists():
+        result_dir = path / 'result'
+    else:
+        raise OSError(f'Could not find result directory or zipfile in {path}.')
+
     # Open h5 data objec to write to
-    h5_data = h5py.File(fname, 'w')
-    # TODO: Use zipfile in order to get this data  <08-02-22, ARL> #
+    with h5py.File(fname, 'w') as h5_data:
 
-    # Get list of tubule files, sort according to time
-    sy_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),
-                          key=get_file_number)
-    # Get list of all protein files, sort according to time
-    xlp_dat_paths = sorted(result_dir.glob("**/ProteinAscii*.dat"),
-                           key=get_file_number)
+        if is_zip:
+            sy_reg = re.compile(r'.*SylinderAscii.*.dat')
+            sy_dat_paths = sorted(list(filter(sy_reg.search, result_zip.namelist())),
+                                  key=get_file_number)
+            sy_dat_paths = [result_path / f for f in sy_dat_paths]
 
-    # assert(len(protein_fnames) == len(tubule_fnames))
-    with open(path / 'RunConfig.yaml', 'r') as rc_file:
-        rc_params = yaml.safe_load(rc_file)
-        h5_data.attrs['RunConfig'] = yaml.dump(rc_params)
+            xlp_reg = re.compile(r'.*ProteinAscii.*.dat')
+            xlp_dat_paths = sorted(list(filter(xlp_reg.search, result_zip.namelist())),
+                                   key=get_file_number)
+            xlp_dat_paths = [result_path / f for f in xlp_dat_paths]
+        else:
+            sy_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),
+                                  key=get_file_number)
+            xlp_dat_paths = sorted(result_dir.glob("**/ProteinAscii*.dat"),
+                                   key=get_file_number)
 
-    with open(path / 'ProteinConfig.yaml', 'r') as xlp_file:
-        xlp_params = yaml.safe_load(xlp_file)
-        h5_data.attrs['ProteinConfig'] = yaml.dump(xlp_params)
+        # assert(len(protein_fnames) == len(tubule_fnames))
+        with (path / 'RunConfig.yaml').open('r') as rc_file:
+            rc_params = yaml.safe_load(rc_file)
+            h5_data.attrs['RunConfig'] = yaml.dump(rc_params)
 
-    time_dset = read_time(sy_dat_paths, h5_data)
-    # Create group of position data
-    posit_grp = h5_data.create_group('raw_data')
+        with (path / 'ProteinConfig.yaml').open('r') as xlp_file:
+            xlp_params = yaml.safe_load(xlp_file)
+            h5_data.attrs['ProteinConfig'] = yaml.dump(xlp_params)
 
-    sy_dset = read_sylinder_data(sy_dat_paths, posit_grp)
-    xlp_dset = read_protein_data(xlp_dat_paths, posit_grp)
-    if store_stress:
-        # Get list of all constraint files, sort according to time
-        con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
-                               key=get_file_number)
-        bi_dset, col_dset = read_constraint_data(con_dat_paths, h5_data)
+        t0 = time.time()
+        time_dset = read_time(sy_dat_paths, h5_data)
+        t1 = time.time()
+        print(f"Made time data set in {t1-t0} seconds.")
+        # Create group of position data
+        posit_grp = h5_data.create_group('raw_data')
 
-    return h5_data
+        sy_dset = read_sylinder_data(sy_dat_paths, posit_grp)
+        t2 = time.time()
+        print(f"Made sylinder data set in {t2-t1} seconds.")
+        xlp_dset = read_protein_data(xlp_dat_paths, posit_grp)
+        t3 = time.time()
+        print(f"Made protin data set in {t3-t2} seconds.")
+        if store_stress:
+            # Get list of all constraint files, sort according to time
+            con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
+                                   key=get_file_number)
+            bi_dset, col_dset = read_constraint_data(con_dat_paths, h5_data)
+            t4 = time.time()
+            print(f"Made protin data set in {t4-t3} seconds.")
+        # Check to see if run.log is present in current simulation
+        # Wall time analysis
+        log_path = list(path.glob('*run*.(log|out)'))
+        if log_path:
+            dwtime = get_walltime(log_path[0])  # TODO make this more robust
+            h5_data.attrs['total_seconds'] = dwtime.total_seconds()
+            h5_data.attrs['walltime'] = str(dwtime)
+        t = time.time()
+        print(f"Made raw data file in a total of {t-t0} seconds.")
 
 
 ##########################################
