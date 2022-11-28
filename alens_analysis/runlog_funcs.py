@@ -7,12 +7,14 @@ Email: alamson@flatironinstitute.org
 Description:
 """
 
+import sys
 import re
 import time
 
 import numpy as np
 
 from datetime import datetime
+from pathlib import Path
 
 
 def get_walltime(log_path):
@@ -72,4 +74,6 @@ def get_wt_timestep(log_path):
 
 ##########################################
 if __name__ == "__main__":
-    print("Not implemented yet")
+    total_time = get_walltime(Path(sys.argv[1]))
+    print(total_time)
+    print(f"Total time in second: {total_time.total_seconds()}")

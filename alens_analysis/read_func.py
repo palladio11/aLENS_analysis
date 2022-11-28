@@ -241,13 +241,13 @@ def convert_dat_to_hdf(fname="TS_data.h5", path=Path('.'), store_stress=False):
     OSError
         If neither result.zip file or result directory do not exist, raise error.
     """
-    # Always opt for using zip archive reading especially on ceph for speed
-    if (path / 'result.zip').exists():
+    if (path / 'result').exists():
+        result_dir = path / 'result'
+        is_zip = False
+    elif (path / 'result.zip').exists():
         result_zip = zipfile.ZipFile(path / 'result.zip')
         result_path = zipfile.Path(path / 'result.zip')
         is_zip = True
-    elif (path / 'result.zip').exists():
-        result_dir = path / 'result'
     else:
         raise OSError(f'Could not find result directory or zipfile in {path}.')
 
