@@ -56,3 +56,24 @@ def collect_contiguous_intervals(arr, delta):
     neg_lengths = (start_pos[1:] - end_pos[:-1]) * 1.
 
     return arr_deriv, contig_idx_arr, pos_lengths, neg_lengths
+
+
+def find_steady_state_ind(arr, avg_inv=(0, None)):
+    """Find the first time an array reaches an average value given an interval
+    to average over (usually the end of the array).
+
+    Parameters
+    ----------
+    arr : _type_
+        _description_
+    avg_inv : tuple, optional
+        _description_, by default (0,None)
+    """
+    arr = np.array(arr)
+    avg = arr[avg_inv[0]:avg_inv[1]].mean()
+    std = arr[avg_inv[0]:avg_inv[1]].std()
+    # Reaching steady-state from a smaller value
+    if avg > arr[0]:
+        return (arr >= (avg-std)).nonzero()[0]
+    # Reaching steady-steady from a larger value
+    return (arr <= (avg+std)).nonzero()[0][0]

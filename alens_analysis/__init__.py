@@ -36,7 +36,6 @@ from .chromatin.chrom_condensate_analysis import (Condensate,
                                                   gen_condensate_track_info,
                                                   get_max_and_total_cond_size,
                                                   extract_condensates,
-                                                  get_auto_corr_fast
                                                   )
 
 from .chromatin.chrom_analysis import (gauss_weighted_contact,

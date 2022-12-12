@@ -285,24 +285,6 @@ def next_pow_two(n):
     return i
 
 
-def get_auto_corr_fast(pos_arr):
-    """Get the autocorrelation function for positions.
-
-    @param pos_arr  TODO
-    @return: TODO
-
-    """
-    nsteps = pos_arr.size
-    n = next_pow_two(nsteps)
-
-    # Compute the FFT and then (from that) the auto-correlation function
-    f = np.fft.fftn(pos_arr, s=[2 * n], axes=[-1])
-    pos_corr = np.fft.ifftn(f * np.conjugate(f))[:nsteps].real
-
-    pos_corr /= 4 * n
-    return pos_corr
-
-
 ##########################################
 if __name__ == "__main__":
     print("Not implemented yet")
