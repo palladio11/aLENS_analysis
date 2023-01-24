@@ -12,6 +12,7 @@ from copy import deepcopy
 
 # Data manipulation
 import numpy as np
+import torch
 import scipy.stats as stats
 from scipy.signal import savgol_filter
 
@@ -499,18 +500,22 @@ def get_end_end_distance(com_arr):
     return np.linalg.norm(com_arr[0, :, :] - com_arr[-1, :, :], axis=0)
 
 
-def calc_rad_of_gyration(pos_mat):
+def calc_rad_of_gyration(com_arr, device='cpu'):
     """Calculate the radius of gyration of filament
 
-    @param pos_mat TODO
+    @param com_arr TODO
     @return: TODO
 
     """
-    n_beads = float(pos_mat.shape[0])
-    rel_pos_arr = pos_mat - np.mean(pos_mat, axis=0)
 
-    rog_sqr_arr = np.einsum('ijk,ijk->k', rel_pos_arr, rel_pos_arr) / n_beads
-    return np.sqrt(rog_sqr_arr)
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    rel_pos_arr = tcom_arr - tcom_arr.mean(dim=0)
+
+    n_beads = float(rel_pos_arr.size(0))
+
+    rog_sqr_arr = torch.einsum(
+        'ijk,ijk->k', rel_pos_arr, rel_pos_arr) / n_beads
+    return torch.sqrt(rog_sqr_arr)
 
 
 def find_neighbors(com_arr, diam, time_ind=0):

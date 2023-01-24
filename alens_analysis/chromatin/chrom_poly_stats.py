@@ -24,37 +24,44 @@ import alens_analysis as aa
 from alens_analysis.helpers import gen_id
 
 
-def poly_bead_rmsd(com_arr, device='cpu'):
-    # avg_rog = (aa.calc_rad_of_gyration(com_arr)).mean()
+def avg_dist_from_poly_com(com_arr, device='cpu'):
     tcom_arr = torch.from_numpy(com_arr).to(device)
+    pol_com = tcom_arr.mean(dim=0).to(device)
+    tcom_dist = torch.norm(tcom_arr-pol_com, dim=1)
+    tcom_dist_avg = torch.mean(tcom_dist, dim=1)
+    return tcom_dist_avg
+
+
+def poly_bead_msd(com_arr, device='cpu'):
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    tcom_arr -= tcom_arr.mean(axis=0)
     n = com_arr.shape[0]
     Ttot = com_arr.shape[-1]
-    pol_com = tcom_arr.mean(axis=0)
-    rmsd = torch.zeros(Ttot, device=device)
+    msd = torch.zeros(Ttot, device=device)
     for i in range(1, Ttot):
-        tdiff_mat = (tcom_arr[:, :, i:] - pol_com[:, i:]) - \
-            (tcom_arr[:, :, :-i] - pol_com[:, :-i])
-        rmsd[i] = torch.einsum('ijk,ijk->', tdiff_mat, tdiff_mat)/((Ttot-i)*n)
+        tdiff_mat = tcom_arr[:, :, i:] - tcom_arr[:, :, :-i]
+        msd[i] = torch.einsum('ijk,ijk->', tdiff_mat, tdiff_mat)/((Ttot-i)*n)
 
-    return rmsd
+    return msd
 
 
 def poly_autocorr(com_arr, device='cpu'):
-    avg_rog = (aa.calc_rad_of_gyration(com_arr)).mean()
     tcom_arr = torch.from_numpy(com_arr).to(device)
-    n = com_arr.shape[0]
     Ttot = com_arr.shape[-1]
     pol_com = tcom_arr.mean(axis=0).to(device)
     autocorr = torch.zeros(Ttot, device=device)
-    for i in range(1, Ttot):
-        autocorr[i] = ((tcom_arr[:, :, i:] - pol_com[:, i:]) *
-                       (tcom_arr[:, :, :-i] - pol_com[:, :-i])).sum()/((Ttot-i)*(avg_rog*avg_rog)*n)
+    autocorr[0] = torch.einsum('ijk,ijk->ik',
+                               (tcom_arr[:, :, :] - pol_com[:, :]),
+                               (tcom_arr[:, :, :] - pol_com[:, :])).mean()
+    for i in list(range(1, Ttot)):
+        autocorr[i] = torch.einsum('ijk,ijk->ik',
+                                   (tcom_arr[:, :, i:] - pol_com[:, i:]),
+                                   (tcom_arr[:, :, :-i] - pol_com[:, :-i])).mean()
 
     return autocorr
 
 
 def poly_autocorr_fast(com_arr, device='cpu'):
-    # avg_rog = (aa.calc_rad_of_gyration(com_arr)).mean()
     tcom_arr = torch.from_numpy(com_arr).to(device)
     pol_com = tcom_arr.mean(dim=0).to(device)
     nsteps = tcom_arr.shape[-1]
@@ -125,15 +132,65 @@ def sep_autocorr_fast(com_arr, device='cpu'):
     return autocorr
 
 
-def power_spec(com_arr, device='cpu'):
+def power_spec(com_arr, dt, device='cpu'):
     tcom_arr = torch.from_numpy(com_arr).to(device)
+    n = tcom_arr.size(-1)
     pol_com = tcom_arr.mean(axis=0).to(device)
-    nsteps = tcom_arr.shape[-1]
 
     # Compute the FFT and then (from that) the power spectrum
-    f = torch.fft.fftn(tcom_arr-pol_com, dim=[-1], norm='forward')
-    power_spec = torch.einsum('ijk,ijk->ik', f, torch.conj(f))[:, :nsteps]
-    return power_spec.mean(dim=0)
+    f = torch.fft.fftn(tcom_arr-pol_com, dim=[-1], norm='ortho')
+    power_spec = dt*torch.einsum('ijk,ijk->ik',
+                                 f, torch.conj(f)).mean(dim=0)
+
+    # Compute the frequencies
+    n_modes = power_spec.size(dim=0)  # Includes negative modes
+    n_ps_pos_vals = int(n_modes/2)
+    freq = torch.fft.fftfreq(n_modes, dt)[:n_ps_pos_vals]
+
+    return power_spec[:n_ps_pos_vals], freq
+
+
+def poly_dist_power_spec(com_arr, dt, device='cpu'):
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    pol_com = tcom_arr.mean(dim=0).to(device)
+    tcom_dist = torch.norm(tcom_arr-pol_com, dim=1)
+
+    # Compute the FFT and then (from that) the power spectrum
+    # 0 dim: bead dimension
+    # 1 dim: xyz
+    # 2 dim: mode dimension
+    f = torch.fft.fftn(tcom_dist, dim=[-1], norm='ortho')
+    power_spec = dt*torch.einsum('ik,ik->ik',
+                                 f, torch.conj(f)).mean(dim=0)
+
+    # Compute the frequencies
+    n_modes = power_spec.size(dim=0)  # Includes negative modes
+    n_ps_pos_vals = int(n_modes/2)
+    freq = torch.fft.fftfreq(n_modes, dt)[:n_ps_pos_vals]
+
+    return power_spec[:n_ps_pos_vals], freq
+
+
+def poly_ang_power_spec(com_arr, dt, device='cpu'):
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    pol_com = tcom_arr.mean(dim=0).to(device)
+    tdir_arr = tcom_arr-pol_com
+    tdir_arr /= torch.norm(tdir_arr, dim=1)[:, None, :]
+
+    # Compute the FFT and then (from that) the power spectrum
+    # 0 dim: bead dimension
+    # 1 dim: xyz
+    # 2 dim: mode dimension
+    f = torch.fft.fftn(tdir_arr, dim=[-1], norm='forward')
+    power_spec = (1./dt)*torch.einsum('ijk,ijk->ik',
+                                      f, torch.conj(f)).mean(dim=0)
+
+    # Compute the frequencies
+    n_modes = power_spec.size(dim=0)  # Includes negative modes
+    n_ps_pos_vals = int(n_modes/2)
+    freq = torch.fft.fftfreq(n_modes, dt)[:n_ps_pos_vals]  # Remove neg modes
+
+    return power_spec[:n_ps_pos_vals], freq
 
 
 def imag_poly_response_func(com_arr, dt, kT=.0041, device='cpu'):
@@ -163,7 +220,7 @@ def imag_poly_response_func(com_arr, dt, kT=.0041, device='cpu'):
 
     # Compute the FFT and then (from that) the power spectrum
     f = torch.fft.fftn(tcom_arr-pol_com, dim=[-1], norm='forward')
-    power_spec = torch.einsum('ijk,ijk->ik', f, torch.conj(f))
+    power_spec = dt * torch.einsum('ijk,ijk->ik', f, torch.conj(f))
     freq_arr = torch.fft.fftfreq(nsteps, dt).to(device)
     iresp = .5*beta*freq_arr*power_spec.mean(dim=0)
     return iresp, freq_arr
