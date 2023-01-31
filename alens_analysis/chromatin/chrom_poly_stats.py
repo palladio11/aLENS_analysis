@@ -159,6 +159,7 @@ def poly_dist_power_spec(com_arr, dt, device='cpu'):
     # 0 dim: bead dimension
     # 1 dim: xyz
     # 2 dim: mode dimension
+    # NOTE: May be off by a factor of pi.
     f = torch.fft.fftn(tcom_dist, dim=[-1], norm='ortho')
     power_spec = dt*torch.einsum('ik,ik->ik',
                                  f, torch.conj(f)).mean(dim=0)
@@ -181,9 +182,9 @@ def poly_ang_power_spec(com_arr, dt, device='cpu'):
     # 0 dim: bead dimension
     # 1 dim: xyz
     # 2 dim: mode dimension
-    f = torch.fft.fftn(tdir_arr, dim=[-1], norm='forward')
-    power_spec = (1./dt)*torch.einsum('ijk,ijk->ik',
-                                      f, torch.conj(f)).mean(dim=0)
+    f = torch.fft.fftn(tdir_arr, dim=[-1], norm='ortho')
+    power_spec = (dt)*torch.einsum('ijk,ijk->ik',
+                                   f, torch.conj(f)).mean(dim=0)
 
     # Compute the frequencies
     n_modes = power_spec.size(dim=0)  # Includes negative modes

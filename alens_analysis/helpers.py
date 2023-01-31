@@ -74,6 +74,6 @@ def find_steady_state_ind(arr, avg_inv=(0, None)):
     std = arr[avg_inv[0]:avg_inv[1]].std()
     # Reaching steady-state from a smaller value
     if avg > arr[0]:
-        return (arr >= (avg-std)).nonzero()[0]
+        return (arr >= (avg-std)).nonzero()[0][0]
     # Reaching steady-steady from a larger value
     return (arr <= (avg+std)).nonzero()[0][0]
