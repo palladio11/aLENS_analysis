@@ -15,7 +15,7 @@ from datetime import datetime
 from .chromatin.chrom_graph_funcs import (make_all_condensate_graphs)
 from .chromatin.chrom_seed_scan_graph_funcs import (
     make_all_seed_scan_condensate_graphs)
-from .read_func import convert_dat_to_hdf
+from .read_func import convert_dat_to_hdf, collect_stress_from_con_pvtp
 from .chromatin.hic_animation import hic_animation
 from .min_animation import min_animation
 from .result_to_pvd import make_pvd_files
@@ -81,6 +81,13 @@ def seed_analysis(opts):
         print(f'raw_{opts.path.stem}')
         convert_dat_to_hdf(h5_raw_path, opts.path)
         print(f" HDF5 raw created in {time.time() - t0}")
+
+    if opts.analysis == 'stress':
+        h5_stress_path = opts.analysis_dir / f'stress_{opts.path.stem}.h5'
+        t0 = time.time()
+        print(f'stress_{opts.path.stem}')
+        collect_stress_from_con_pvtp(h5_stress_path, opts.path)
+        print(f" HDF5 stress created in {time.time() - t0}")
 
     if opts.analysis == 'cluster':
         t0 = time.time()

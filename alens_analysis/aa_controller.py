@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 
 from .colormaps import register_cmaps
 from .controller_funcs import TYPE_FUNC_DICT
+from .time_testing import run_time_testing
 # from .chrom_analysis import get_pos_kymo_data, get_pos_cond_data
 
 
@@ -40,6 +41,7 @@ def parse_args():
                         choices=[None,
                                  'collect',
                                  'cluster',
+                                 'stress'
                                  ],
                         default=None,
                         help=" Specify analysis and what hdf5 file will be written.")
@@ -59,6 +61,10 @@ def parse_args():
                         " param_seed_scan: comparison of data of different\n"
                         "                  parameter with multiple seeds\n"
                         )
+    parser.add_argument("-T", "--time_testing",
+                        type=int,
+                        default=0,
+                        help="Run aLENS in a directory one lower, collect the runtime statistics and put them in file located in the analysis directory.")
 
     parser.add_argument("-f ", "--force", action='store_true',
                         help="Force analysis to occur. Overwrite previous analysis done.")
@@ -118,6 +124,11 @@ def main():
 
     """
     opts = parse_args()
+    if opts.time_testing:
+        print("### Running time testing ###")
+        run_time_testing(opts.time_testing, opts)
+        return
+
     TYPE_FUNC_DICT[opts.type](opts)
 
 

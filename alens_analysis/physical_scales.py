@@ -29,8 +29,7 @@ def get_poly_diffuse_dist(time, n_beads, bead_diam,
 
 
 def get_rouse_time(n_beads, bead_diam, viscosity, kT=.00411):
-    return 2. * viscosity * \
-        np.power(bead_diam, 3) * n_beads * n_beads / (3 * np.pi * kT)
+    return viscosity * np.power(bead_diam, 3) * n_beads * n_beads / (2 * np.pi * kT)
 
 
 def get_link_relax_time(bead_rad, viscosity, spring_const):

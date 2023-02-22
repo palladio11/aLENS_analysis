@@ -10,6 +10,7 @@ import h5py
 import re
 import yaml
 import vtk
+from vtk.util import numpy_support as vn
 import time
 import numpy as np
 from pathlib import Path
@@ -71,7 +72,6 @@ def read_dat_xlp(fpath):
 
 
 def read_dat_constraint(fpath):
-    # Read a SylinderAscii_X.dat file
 
     con_blocks = []
     # open the file and read the lines
@@ -112,6 +112,24 @@ def read_dat_constraint(fpath):
             setattr(con_blocks[j], dataName + "1", pdata.GetTuple(2 * j + 1))
 
     return con_blocks
+
+
+def read_stress_from_con(fpath):
+    reader = vtk.vtkXMLPPolyDataReader()
+    reader.SetFileName(str(fpath))
+    reader.Update()
+    data = reader.GetOutput()
+
+    stress_arr = vn.vtk_to_numpy(data.GetCellData().GetVectors('Stress'))
+    bilat_flag_arr = vn.vtk_to_numpy(
+        data.GetCellData().GetVectors('bilateral'))
+    collision_stress = stress_arr[bilat_flag_arr ==
+                                  0, :].sum(axis=0).reshape((3, 3))
+    bilat_stress = stress_arr[bilat_flag_arr ==
+                              1, :].sum(axis=0).reshape((3, 3))
+    return bilat_stress, collision_stress
+
+    # return stress_arr.sum(axis=0).reshape((3, 3))
 
 
 def read_time(fpaths, h5_data):
@@ -211,26 +229,34 @@ def read_constraint_data(cons_fnames, h5_data):
     bi_dset.attrs['axis labels'] = ['dim', 'dim', 'frame']
     col_dset.attrs['axis labels'] = ['dim', 'dim', 'frame']
     for frame, tfname in enumerate(cons_fnames):
-        fpath = Path(tfname).resolve()
-        con_blocks = read_dat_constraint(fpath)
-        bi_dset[:, :, frame] = np.zeros((3, 3))
-        col_dset[:, :, frame] = np.zeros((3, 3))
-        for cb in con_blocks:
-            if cb.bilateral[0] == 1.:
-                bi_dset[:, :, frame] += np.reshape(cb.Stress, (3, 3))
-            else:
-                col_dset[:, :, frame] += np.reshape(cb.Stress, (3, 3))
+        collision_stress, bilateral_stress = read_stress_from_con(tfname)
+        # print(f'Step {frame}: {collision_stress.flatten()}')
+        col_dset[:, :, frame] = collision_stress
+        bi_dset[:, :, frame] = bilateral_stress
 
     return bi_dset, col_dset
 
 
-def convert_dat_to_hdf(fname="TS_data.h5", path=Path('.'), store_stress=False):
+def collect_stress_from_con_pvtp(fname="stress.h5", path=Path('.')):
+    result_dir = path / 'result'
+    if not result_dir.exists():
+        raise FileNotFoundError(
+            f'Result directory {str(result_dir)} does not exist.')
+
+    with h5py.File(fname, 'w') as h5_data:
+        con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
+                               key=get_file_number)
+        bi_dset, col_dset = read_constraint_data(con_dat_paths, h5_data)
+        t4 = time.time()
+
+
+def convert_dat_to_hdf(fname="raw_data.h5", path=Path('.'), store_stress=False):
     """Convert separate ascii and vtk data files into a single hdf5 file
 
     Parameters
     ----------
     fname : str, optional
-        Name of the file to save, by default "TS_data.h5"
+        Name of the file to save, by default "raw_data.h5"
     path : Path object, optional
         The seed directory of the simulation, by default Path('.')
     store_stress : bool, optional
@@ -251,9 +277,9 @@ def convert_dat_to_hdf(fname="TS_data.h5", path=Path('.'), store_stress=False):
     else:
         raise OSError(f'Could not find result directory or zipfile in {path}.')
 
-    # Open h5 data objec to write to
+    # Open raw h5 data objec to write to
     with h5py.File(fname, 'w') as h5_data:
-
+        # Get paths (depends on if you are using zip archive or not)
         if is_zip:
             sy_reg = re.compile(r'.*SylinderAscii.*.dat')
             sy_dat_paths = sorted(list(filter(sy_reg.search, result_zip.namelist())),
@@ -279,28 +305,41 @@ def convert_dat_to_hdf(fname="TS_data.h5", path=Path('.'), store_stress=False):
             xlp_params = yaml.safe_load(xlp_file)
             h5_data.attrs['ProteinConfig'] = yaml.dump(xlp_params)
 
+        # Make time array
         t0 = time.time()
         time_dset = read_time(sy_dat_paths, h5_data)
         t1 = time.time()
         print(f"Made time data set in {t1-t0} seconds.")
+
         # Create group of position data
         posit_grp = h5_data.create_group('raw_data')
 
+        # Make sylinder data
         sy_dset = read_sylinder_data(sy_dat_paths, posit_grp)
         t2 = time.time()
         print(f"Made sylinder data set in {t2-t1} seconds.")
+
+        # Make protein data
         xlp_dset = read_protein_data(xlp_dat_paths, posit_grp)
         t3 = time.time()
         print(f"Made protin data set in {t3-t2} seconds.")
-        if store_stress:
+
+        # Make stress data
+        if not is_zip:
             # Get list of all constraint files, sort according to time
-            con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
-                                   key=get_file_number)
-            bi_dset, col_dset = read_constraint_data(con_dat_paths, h5_data)
-            t4 = time.time()
-            print(f"Made protin data set in {t4-t3} seconds.")
-        # Check to see if run.log is present in current simulation
+            try:
+                h5_stress_path = fname.parent / f'stress_{path.stem}.h5'
+                con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
+                                       key=get_file_number)
+                bi_dset, col_dset = collect_stress_from_con_pvtp(
+                    h5_stress_path, path)
+                t4 = time.time()
+                print(f"Made stress data set in {t4-t3} seconds.")
+            except:
+                print("Could not make stress data.")
+
         # Wall time analysis
+        # Check to see if run.log is present in current simulation
         log_path = list(path.glob('*run*.(log|out)'))
         if log_path:
             dwtime = get_walltime(log_path[0])  # TODO make this more robust

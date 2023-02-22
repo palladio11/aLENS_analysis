@@ -235,12 +235,6 @@ def real_poly_response_func(iresp_arr):
     ----------
     com_arr : N X 3 X T
         _description_
-    dt : int
-        _description_
-    beta : float, optional
-        _description_, by default .0041
-    device : str, optional
-        _description_, by default 'cpu'
 
     Returns
     -------
