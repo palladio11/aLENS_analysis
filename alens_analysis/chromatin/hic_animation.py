@@ -158,10 +158,101 @@ def hic_animation(opts):
                             png_paths,
                             init_mutable, opts),
                         blit=True)
+    fig.set_size_inches(20, 8, True)
     ani.save(
         opts.analysis_dir /
         f'{opts.params["style"]}_mat_vid.mp4',
-        writer=writer)
+        writer=writer,
+        dpi=300)
+
+
+def animate_hic_only(i, fig, ax, fil_dat_paths, init_mutable, opts):
+    ax.clear()
+
+    print(f'Making frame {i}')
+
+    t0 = time()
+    frame, X, Y = create_hic_frame(fil_dat_paths[i], **opts.params)
+    t1 = time()
+    print(f"Frame {i} created in: {t1-t0:.2g} sec")
+
+    c = ax.pcolorfast(X, Y, frame, vmin=opts.params['vmin'])
+    t2 = time()
+    print(f"Frame {i} drawn in: {t2 - t1:.2g} sec")
+
+    # if init_mutable[0] == True:  # Cludge, there is a better way to do thisdf cdf
+    #     fig.colorbar(
+    #         c,
+    #         ax=ax,
+    #         # label=r"$\log$(Inferred contact map) $\sim$
+    #         # ($r_{ij}^2/2\sigma^2$)")
+    #         label=r"Log contact probability $\sim$ ($-r_{ij}^2$)")
+    #     init_mutable[0] = False
+
+    # ax.set_xlabel(r"Bead index")
+    # ax.set_ylabel(r"Bead index")
+
+    # pcm = ax.pcolorfast(frames[i], cmap='gray', vmax=vmax)
+    # ax.set_title("Time {:.2f} sec".format(
+    # float(i * opts.params['time_step'] * opts.params['n_graph'])))
+    return [c]
+
+
+def hic_only_animation(opts):
+
+    alens_stl = {
+        "axes.titlesize": 20,
+        "axes.labelsize": 24,
+        "lines.linewidth": 3,
+        "lines.markersize": 10,
+        "xtick.labelsize": 24,
+        "ytick.labelsize": 24,
+        "font.size": 20,
+        "font.sans-serif": 'Helvetica',
+        "text.usetex": False,
+        'mathtext.fontset': 'cm',
+    }
+    plt.style.use(alens_stl)
+
+    with open(opts.path / 'RunConfig.yaml', 'r') as yf:
+        run_params = yaml.safe_load(yf)
+        opts.params['time_step'] = run_params['timeSnap']
+
+    result_dir = opts.result_dir
+    fil_dat_paths = sorted(result_dir.glob("**/SylinderAscii*.dat"),
+                           key=get_file_number)[::opts.params['n_graph']]
+
+    # print(png_paths)
+    init_mutable = [True]
+    nframes = len(fil_dat_paths)
+    print(nframes)
+
+    fig, axarr = plt.subplots(1, 1, figsize=(10, 8))
+    axarr.tick_params(top=False, bottom=False, left=False, right=False,
+                      labelleft=False, labelbottom=False)
+    writer = FFMpegWriter(
+        fps=opts.params['fps'],
+        codec='libx264',
+        bitrate=-1,
+        extra_args=[
+            '-pix_fmt',
+            'yuv420p'])
+    vmax = 0
+    axarr.set_aspect('equal')
+    ani = FuncAnimation(fig, animate_hic_only, nframes,
+                        fargs=(
+                            fig,
+                            axarr,
+                            fil_dat_paths,
+                            init_mutable, opts),
+                        blit=True)
+
+    fig.set_size_inches(10, 8, True)
+    ani.save(
+        opts.analysis_dir /
+        f'{opts.params["style"]}_{opts.colormap}_mat_vid.mp4',
+        writer=writer,
+        dpi=300)
 
 
 ##########################################

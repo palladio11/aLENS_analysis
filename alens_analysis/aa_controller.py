@@ -71,7 +71,7 @@ def parse_args():
     parser.add_argument("-v ", "--verbose", action='store_true',
                         help="Output more information to stdout.")
 
-    parser.add_argument("-M", "--movie", choices=[None, "hic", "min"], default=None,
+    parser.add_argument("-M", "--movie", choices=[None, "hic", "hic_only", "min"], default=None,
                         help=("Create an animation from a seed. "
                               "hic: movie with instantaneous Hi-C map"
                               "min: images only"))

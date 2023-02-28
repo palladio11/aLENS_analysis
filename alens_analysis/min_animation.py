@@ -61,7 +61,7 @@ def min_animation(opts):
 
     nframes = len(png_paths)
     print(nframes)
-    fig, ax = plt.subplots(figsize=(20, 8))
+    fig, ax = plt.subplots(figsize=(16, 8))
     writer = FFMpegWriter(
         fps=opts.params['fps'],
         codec='libx264',
@@ -72,6 +72,7 @@ def min_animation(opts):
         ]
     )
     vmax = 0
+    fig.set_size_inches(16, 8, True)
     ani = FuncAnimation(fig, animate, nframes,
                         fargs=(
                             fig,
@@ -79,7 +80,7 @@ def min_animation(opts):
                             png_paths,
                             opts),
                         blit=True)
-    ani.save(opts.analysis_dir / f'min_vid.mp4', writer=writer)
+    ani.save(opts.analysis_dir / f'min_vid.mp4', writer=writer, dpi=300)
 
 
 ##########################################
