@@ -13,8 +13,8 @@ import gc
 
 # Data manipulation
 import numpy as np
-import scipy.stats as stats
 from scipy.signal import savgol_filter
+from scipy.sparse import csr_matrix, coo_matrix
 from scipy import fftpack
 import torch
 
@@ -248,3 +248,22 @@ def real_poly_response_func(iresp_arr):
     dst_arr = fftpack.dst(dct_arr, norm='ortho')
 
     return (2/np.pi) * dst_arr
+
+
+def get_connect_smat(prot_arr):
+    nlinks = prot_arr.shape[0]
+    xlinks = (prot_arr[:, -1] >= 0)
+    xlink_coords = prot_arr[xlinks][:, -2:].astype(int)
+    data = np.ones((xlink_coords.shape[0]))
+    return csr_matrix((data, (xlink_coords[:, 0], xlink_coords[:, 1])), shape=[nlinks, nlinks])
+
+
+def connect_autocorr(connect_mat_list):
+    n = len(connect_mat_list)
+    autocorr_arr = np.zeros(n)
+    for i in range(n):
+        for j in range(n-i):
+            autocorr_arr[i] += connect_mat_list[j].multiply(
+                connect_mat_list[j+i]).sum()
+        autocorr_arr[i] /= float(n-i)
+    return autocorr_arr

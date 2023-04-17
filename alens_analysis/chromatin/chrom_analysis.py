@@ -8,7 +8,11 @@ Description:
 """
 # Basic useful imports
 import yaml
+import h5py
 from copy import deepcopy
+from time import time
+from functools import reduce
+
 
 # Data manipulation
 import numpy as np
@@ -17,6 +21,8 @@ import scipy.stats as stats
 from scipy.signal import savgol_filter
 
 from ..helpers import contiguous_regions
+
+from .chrom_poly_stats import get_connect_smat, connect_autocorr
 
 
 def gauss_weighted_contact(sep_mat, sigma=.020, radius_arr=None):
@@ -526,6 +532,35 @@ def find_neighbors(com_arr, diam, time_ind=0):
                                     com_arr[np.newaxis, :, :, time_ind]),
                                    axis=2) < diam * 1.2).astype(int)
     return neighbor_mat
+
+
+def create_connect_hdf5(h5_raw_path, force=False, verbose=False):
+    # Create path for cluster data file
+    connect_path = (h5_raw_path.parent /
+                    f'connect_{h5_raw_path.parent.stem}.h5')
+    if connect_path.exists():
+        if not force:
+            print(
+                f"Warning: connect data file {connect_path.name} exists and was not overwritten.")
+            return
+        connect_path.unlink()
+
+    # Run analysis
+    with h5py.File(h5_raw_path, 'r') as h5_data:
+        time_arr = h5_data['time'][...]
+        prot_dat = h5_data['raw_data/proteins'][...]
+        connect_mat_list = []
+        for i in range(time_arr.size):
+            connect_mat_list += [get_connect_smat(prot_dat[:, :, i])]
+
+        avg_connect_mat = reduce(lambda x, y: x + y, connect_mat_list)
+
+    with h5py.File(connect_path, 'w') as h5_cnct:
+        _ = h5_cnct.create_dataset('time', data=time_arr)
+        _ = h5_cnct.create_dataset(
+            'avg_connect_mat', data=avg_connect_mat.toarray())
+        ac_arr = connect_autocorr(connect_mat_list[:])
+        _ = h5_cnct.create_dataset('autocorr', data=ac_arr)
 
 
 ##########################################

@@ -21,6 +21,7 @@ from .min_animation import min_animation
 from .result_to_pvd import make_pvd_files
 from .runlog_funcs import get_walltime
 from .cluster_analysis import create_cluster_hdf5
+from .chromatin.chrom_analysis import create_connect_hdf5
 
 MOVIE_DICT = {
     'hic': hic_animation,
@@ -77,7 +78,17 @@ def seed_analysis(opts):
              directory
 
     """
-    h5_raw_path = opts.analysis_dir / f'raw_{opts.path.stem}.h5'
+    # find raw data path
+    raw_files = list(opts.analysis_dir.glob('raw*.h5'))
+    if not raw_files:
+        h5_raw_path = opts.analysis_dir / f'raw_{opts.path.stem}.h5'
+    elif len(raw_files) == 1:
+        h5_raw_path = raw_files[0]
+    else:
+        print(
+            f"Too many raw files. Please look in {str(opts.analysis_dir.resolve())} and choose one.")
+        return
+
     if opts.analysis == 'collect':
         t0 = time.time()
         print(f'raw_{opts.path.stem}')
@@ -96,6 +107,12 @@ def seed_analysis(opts):
         create_cluster_hdf5(h5_raw_path, force=opts.force,
                             verbose=opts.verbose)
         print(f" HDF5 cluster file created in {time.time() - t0}")
+
+    if opts.analysis == 'connect':
+        t0 = time.time()
+        create_connect_hdf5(h5_raw_path, force=opts.force,
+                            verbose=opts.verbose)
+        print(f" HDF5 connect file created in {time.time() - t0}")
 
     if opts.movie:
         MOVIE_DICT[opts.movie](opts)

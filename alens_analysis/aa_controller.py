@@ -41,6 +41,7 @@ def parse_args():
                         choices=[None,
                                  'collect',
                                  'cluster',
+                                 'connect',
                                  'stress'
                                  ],
                         default=None,
