@@ -1,0 +1,13 @@
+pytorch 
+nomkl 
+scikit-learn 
+numpy 
+h5py 
+scipy 
+matplotlib 
+vtk 
+pyyaml 
+numba 
+tqdm 
+toml 
+jupyterlab

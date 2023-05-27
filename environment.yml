@@ -1,12 +1,17 @@
-name: test_alens
+name: analysis
 channels:
-  - conda-forge
   - defaults
 dependencies:
-  - numpy
-  - h5py
-  - scipy
   - matplotlib
+  - toml
+  - nomkl
+  - scipy
+  - tqdm
+  - numpy
   - vtk
-  - pyyaml
+  - scikit-learn
+  - h5py
   - numba
+  - pytorch
+  - pyyaml
+  - jupyterlab
