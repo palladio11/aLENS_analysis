@@ -13,6 +13,7 @@ import gc
 
 # Data manipulation
 import numpy as np
+import scipy.stats as stats
 from scipy.signal import savgol_filter
 from scipy.sparse import csr_matrix, coo_matrix
 from scipy import fftpack
@@ -43,6 +44,28 @@ def poly_bead_msd(com_arr, device='cpu'):
         msd[i] = torch.einsum('ijk,ijk->', tdiff_mat, tdiff_mat)/((Ttot-i)*n)
 
     return msd
+
+
+def dist_vs_idx_dist(com_arr):
+    sep_mat = np.linalg.norm(
+        com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=2)
+    avg_dist_arr = np.zeros((sep_mat.shape[0]))
+    avg_dist_sem_arr = np.zeros((sep_mat.shape[0]))
+    for i in range(1, sep_mat.shape[0]):
+        diag = np.diagonal(sep_mat, i)
+        avg_dist_arr[i] = diag.mean()
+        avg_dist_sem_arr[i] = stats.sem(diag)
+    return avg_dist_arr, avg_dist_sem_arr
+
+# def dist_vs_idx_dist_time_avg(com_arr):
+#     sep_mat = np.linalg.norm(com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=2)
+#     avg_dist_arr = np.zeros((sep_mat.shape[0]))
+#     avg_dist_sem_arr = np.zeros((sep_mat.shape[0]))
+#     for i in range(1,sep_mat.shape[0]):
+#         diag = np.diagonal(sep_mat, i)
+#         avg_dist_arr[i] = diag.mean()
+#         avg_dist_sem_arr[i] = stats.sem(diag)
+#     return avg_dist_arr, avg_dist_sem_arr
 
 
 def poly_autocorr(com_arr, device='cpu'):

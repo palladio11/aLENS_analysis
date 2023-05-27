@@ -6,22 +6,13 @@ Author: Adam Lamson
 Email: alamson@flatironinstitute.org
 Description:
 """
-# Basic useful imports
-import re
-import time
-import yaml
-from pprint import pprint
-from pathlib import Path
-import h5py
 
 # Data manipulation
 import numpy as np
-from scipy.special import erf
-from scipy.integrate import quad
-import scipy.stats as stats
+import torch
 
 
-def get_rouse_modes_at_t(pos_arr, nmodes=20):
+def get_rouse_modes_at_t(pos_arr, n_modes=20):
     """TODO: Docstring for get_rouse_modes.
 
     @param sphere_dat TODO
@@ -29,17 +20,23 @@ def get_rouse_modes_at_t(pos_arr, nmodes=20):
     @return: TODO
 
     """
-    modes = []
-    mode_0 = pos_arr[0]
+    # modes = []
+    # mode_0 = pos_arr[0]
+    com_arr = pos_arr - pos_arr[0]
     nbeads = pos_arr.shape[0]
+    mode_coeff_arr = np.zeros((n_modes, 3))
+    kn_mat = np.einsum('n,k->nk',
+                       .5+np.arange(0, nbeads),
+                       (np.pi/nbeads)*np.arange(0, n_modes))
+    modes = np.einsum('nk,ni->ki', np.cos(kn_mat), com_arr)
 
-    for k in range(nmodes):
-        modes += [np.zeros(3)]
-        for n in range(nbeads - 1):
-            modes[-1] += ((pos_arr[n] - mode_0) *
-                          np.cos(np.pi * (n + .5) * k / nbeads))
-
-    return np.asarray(modes) / (nbeads)
+    # for k in range(nmodes):
+    #     modes += [np.zeros(3)]
+    #     for n in range(nbeads - 1):
+    #         modes[-1] += ((pos_arr[n] - mode_0) *
+    #                       np.cos(np.pi * (n + .5) * k / nbeads))
+    # return np.asarray(modes) / (nbeads)
+    return modes / nbeads
 
 
 def get_rouse_modes(pos_mat, nmodes=20):
@@ -86,24 +83,44 @@ def next_pow_two(n):
     return i
 
 
-def get_rouse_mode_corr_fast(mode_mat):
+# def get_rouse_mode_corr_fast(mode_mat):
+#     """Get the autocorrelation function of rouse modes using fftw.
+
+#     @param mode_mat TODO
+#     @return: TODO
+
+#     """
+#     nsteps = mode_mat.shape[-1]
+#     n = next_pow_two(nsteps)
+
+#     # Compute the FFT and then (from that) the auto-correlation function
+#     f = np.fft.fftn(mode_mat, s=[2 * n], axes=[-1])
+#     mode_corr = np.fft.ifftn(np.einsum('ijk,ijk->ik', f,
+#                                        np.conjugate(f)),
+#                              axes=[-1])[:nsteps].real
+
+#     mode_corr /= 4 * n
+#     return mode_corr
+
+def get_rouse_mode_corr_fast(mode_mat, device='cpu'):
     """Get the autocorrelation function of rouse modes using fftw.
 
     @param mode_mat TODO
     @return: TODO
 
     """
-    nsteps = mode_mat.shape[-1]
-    n = next_pow_two(nsteps)
+    tmode_mat = torch.from_numpy(mode_mat).to(device)
+    nsteps = tmode_mat.shape[-1]
+    # n = next_pow_two(nsteps)
 
     # Compute the FFT and then (from that) the auto-correlation function
-    f = np.fft.fftn(mode_mat, s=[2 * n], axes=[-1])
-    mode_corr = np.fft.ifftn(np.einsum('ijk,ijk->ik', f,
-                                       np.conjugate(f)),
-                             axes=[-1])[:nsteps].real
+    f = torch.fft.fftn(tmode_mat, dim=[-1], norm='forward')
+    power_spec = torch.einsum('ijk,ijk->ik', f, torch.conj(f))
+    n_pos_vals = int(power_spec.size(-1)/2)
+    mode_corr = torch.fft.ifftn(
+        power_spec, norm='forward', dim=[-1])[:, :nsteps].real
 
-    mode_corr /= 4 * n
-    return mode_corr
+    return mode_corr[:, :n_pos_vals]
 
 
 ##########################################
