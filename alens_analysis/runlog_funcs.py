@@ -7,12 +7,14 @@ Email: alamson@flatironinstitute.org
 Description:
 """
 
+import sys
 import re
 import time
 
 import numpy as np
 
 from datetime import datetime
+from pathlib import Path
 
 
 def get_walltime(log_path):
@@ -70,6 +72,23 @@ def get_wt_timestep(log_path):
     return fconv(wt_arr[1:] - wt_arr[:-1])
 
 
+def calc_timestep_stats(log_path):
+    """TODO: Docstring for calc_timestep_states.
+
+    @param log_path TODO
+    @return: TODO
+
+    """
+    wt_step_arr = get_wt_timestep(log_path)
+    tot_wt = wt_step_arr[-1] - wt_step_arr[0]
+    return (float(wt_step_arr.mean()),
+            float(np.median(wt_step_arr)),
+            float(wt_step_arr.std()),
+            float(np.max(wt_step_arr)))
+
+
 ##########################################
 if __name__ == "__main__":
-    print("Not implemented yet")
+    total_time = get_walltime(Path(sys.argv[1]))
+    print(total_time)
+    print(f"Total time in second: {total_time.total_seconds()}")

@@ -20,6 +20,7 @@ rdf_**/
 __pycache__/
 *.py[cod]
 *$py.class
+notebooks/*-jvsc-*.ipynb
 
 # C extensions
 *.so
@@ -145,3 +146,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Specific files
+notebooks/corr_harm_well_test.h5

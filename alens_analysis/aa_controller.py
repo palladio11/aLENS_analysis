@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 
 from .colormaps import register_cmaps
 from .controller_funcs import TYPE_FUNC_DICT
+from .time_testing import run_time_testing
 # from .chrom_analysis import get_pos_kymo_data, get_pos_cond_data
 
 
@@ -28,8 +29,19 @@ def parse_args():
 
     parser.add_argument("-p", "--path", default=".",
                         help="Path used in aLENS Analysis functions.")
+
     parser.add_argument('-i', "--image_input", default=None,
                         help="Image parameter yaml file")
+
+    parser.add_argument("-A ", "--analysis",
+                        choices=[None,
+                                 'collect',
+                                 'cluster',
+                                 'connect',
+                                 'stress'
+                                 ],
+                        default=None,
+                        help=" Specify analysis and what hdf5 file will be written.")
 
     parser.add_argument("-t", "--type",
                         choices=[
@@ -46,20 +58,17 @@ def parse_args():
                         " param_seed_scan: comparison of data of different\n"
                         "                  parameter with multiple seeds\n"
                         )
+    parser.add_argument("-T", "--time_testing",
+                        type=int,
+                        default=0,
+                        help="Run aLENS in a directory one lower, collect the runtime statistics and put them in file located in the analysis directory.")
 
-    parser.add_argument("-A ", "--analysis",
-                        choices=[
-                            None,
-                            'collect',
-                            'read',
-                            'load',
-                            'analyze',
-                            'overwrite'],
-                        default=None,
-                        help=" Specify analysis type to determine if data will"
-                        " be overwritten. Options include "
-                        "(overwrite, None(default), or load.")
-    parser.add_argument("-M", "--movie", choices=[None, "hic", "min"], default=None,
+    parser.add_argument("-f ", "--force", action='store_true',
+                        help="Force analysis to occur. Overwrite previous analysis done.")
+    parser.add_argument("-v ", "--verbose", action='store_true',
+                        help="Output more information to stdout.")
+
+    parser.add_argument("-M", "--movie", choices=[None, "hic", "hic_only", "min"], default=None,
                         help=("Create an animation from a seed. "
                               "hic: movie with instantaneous Hi-C map"
                               "min: images only"))
@@ -112,6 +121,11 @@ def main():
 
     """
     opts = parse_args()
+    if opts.time_testing:
+        print("### Running time testing ###")
+        run_time_testing(opts.time_testing, opts)
+        return
+
     TYPE_FUNC_DICT[opts.type](opts)
 
 

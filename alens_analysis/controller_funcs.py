@@ -15,15 +15,19 @@ from datetime import datetime
 from .chromatin.chrom_graph_funcs import (make_all_condensate_graphs)
 from .chromatin.chrom_seed_scan_graph_funcs import (
     make_all_seed_scan_condensate_graphs)
-from .read_func import convert_dat_to_hdf
-from .chromatin.hic_animation import hic_animation
+from .read_func import convert_dat_to_hdf, collect_stress_from_con_pvtp
+from .chromatin.hic_animation import hic_animation, hic_only_animation
 from .min_animation import min_animation
 from .result_to_pvd import make_pvd_files
 from .runlog_funcs import get_walltime
+from .cluster_analysis import create_cluster_hdf5
+from .chromatin.chrom_analysis import create_connect_hdf5
 
-MOVIE_DICT = {'hic': hic_animation,
-              'min': min_animation,
-              }
+MOVIE_DICT = {
+    'hic': hic_animation,
+    'hic_only': hic_only_animation,
+    'min': min_animation,
+}
 
 
 def make_seed_graphs(opts):
@@ -74,25 +78,41 @@ def seed_analysis(opts):
              directory
 
     """
+    # find raw data path
+    raw_files = list(opts.analysis_dir.glob('raw*.h5'))
+    if not raw_files:
+        h5_raw_path = opts.analysis_dir / f'raw_{opts.path.stem}.h5'
+    elif len(raw_files) == 1:
+        h5_raw_path = raw_files[0]
+    else:
+        print(
+            f"Too many raw files. Please look in {str(opts.analysis_dir.resolve())} and choose one.")
+        return
+
     if opts.analysis == 'collect':
-        # make_pvd_files(opts.result_dir)
         t0 = time.time()
-        h5_path = opts.analysis_dir / f'{opts.path.stem}.h5'
-        print(f'{opts.path.stem}')
-        h5_data = convert_dat_to_hdf(h5_path, opts.path)
-        print(f" HDF5 created in {time.time() - t0}")
-        # Check to see if run.log is present in current simulation
-        # Wall time analysis
-        if (opts.path / 'run.log').exists():
-            dwtime = get_walltime(opts.path / 'run.log')
-            h5_data.attrs['total_seconds'] = dwtime.total_seconds()
-            h5_data.attrs['walltime'] = str(dwtime)
-        try:
-            h5_data.flush()
-            h5_data.close()
-        except BaseException:
-            print("Could not close h5_data file")
-            pass
+        print(f'raw_{opts.path.stem}')
+        convert_dat_to_hdf(h5_raw_path, opts.path)
+        print(f" HDF5 raw created in {time.time() - t0}")
+
+    if opts.analysis == 'stress':
+        h5_stress_path = opts.analysis_dir / f'stress_{opts.path.stem}.h5'
+        t0 = time.time()
+        print(f'stress_{opts.path.stem}')
+        collect_stress_from_con_pvtp(h5_stress_path, opts.path)
+        print(f" HDF5 stress created in {time.time() - t0}")
+
+    if opts.analysis == 'cluster':
+        t0 = time.time()
+        create_cluster_hdf5(h5_raw_path, force=opts.force,
+                            verbose=opts.verbose)
+        print(f" HDF5 cluster file created in {time.time() - t0}")
+
+    if opts.analysis == 'connect':
+        t0 = time.time()
+        create_connect_hdf5(h5_raw_path, force=opts.force,
+                            verbose=opts.verbose)
+        print(f" HDF5 connect file created in {time.time() - t0}")
 
     if opts.movie:
         MOVIE_DICT[opts.movie](opts)

@@ -8,10 +8,15 @@ Description:
 """
 # Basic useful imports
 import yaml
+import h5py
 from copy import deepcopy
+from time import time
+from functools import reduce
+
 
 # Data manipulation
 import numpy as np
+import torch
 import scipy.stats as stats
 from scipy.signal import savgol_filter
 
@@ -19,6 +24,8 @@ from scipy.signal import savgol_filter
 from itertools import cycle
 
 from ..helpers import contiguous_regions
+
+from .chrom_poly_stats import get_connect_smat, connect_autocorr
 
 
 def gauss_weighted_contact(sep_mat, sigma=.020, radius_arr=None):
@@ -450,10 +457,9 @@ def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1):
             0, hist_max], density=False)
     dr = rad_bin_edges[1:] - rad_bin_edges[:-1]
     rad = .5 * (rad_bin_edges[1:] + rad_bin_edges[:-1])
-    rad_distr_func = np.array(rad_distr_func, dtype=float)
-
-    rad_distr_func /= 2. * np.pi * np.power(rad, 2) * dr * orig_density
-    return (rad_distr_func, rad)
+    rad_distr_func = np.divide(
+        rad_distr_func,  np.pi * np.power(rad, 2.) * dr * orig_density * dist_mat.size)
+    return (rad_distr_func, rad_bin_edges)
 
 
 def get_all_rog_stats(pos_mat, rel_ind=0):
@@ -530,18 +536,22 @@ def get_end_end_distance(com_arr):
     return np.linalg.norm(com_arr[0, :, :] - com_arr[-1, :, :], axis=0)
 
 
-def calc_rad_of_gyration(pos_mat):
+def calc_rad_of_gyration(com_arr, device='cpu'):
     """Calculate the radius of gyration of filament
 
-    @param pos_mat TODO
+    @param com_arr TODO
     @return: TODO
 
     """
-    n_beads = float(pos_mat.shape[0])
-    rel_pos_arr = pos_mat - np.mean(pos_mat, axis=0)
 
-    rog_sqr_arr = np.einsum('ijk,ijk->k', rel_pos_arr, rel_pos_arr) / n_beads
-    return np.sqrt(rog_sqr_arr)
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    rel_pos_arr = tcom_arr - tcom_arr.mean(dim=0)
+
+    n_beads = float(rel_pos_arr.size(0))
+
+    rog_sqr_arr = torch.einsum(
+        'ijk,ijk->k', rel_pos_arr, rel_pos_arr) / n_beads
+    return torch.sqrt(rog_sqr_arr)
 
 
 def find_neighbors(com_arr, diam, time_ind=0):
@@ -552,6 +562,35 @@ def find_neighbors(com_arr, diam, time_ind=0):
                                     com_arr[np.newaxis, :, :, time_ind]),
                                    axis=2) < diam * 1.2).astype(int)
     return neighbor_mat
+
+
+def create_connect_hdf5(h5_raw_path, force=False, verbose=False):
+    # Create path for cluster data file
+    connect_path = (h5_raw_path.parent /
+                    f'connect_{h5_raw_path.parent.stem}.h5')
+    if connect_path.exists():
+        if not force:
+            print(
+                f"Warning: connect data file {connect_path.name} exists and was not overwritten.")
+            return
+        connect_path.unlink()
+
+    # Run analysis
+    with h5py.File(h5_raw_path, 'r') as h5_data:
+        time_arr = h5_data['time'][...]
+        prot_dat = h5_data['raw_data/proteins'][...]
+        connect_mat_list = []
+        for i in range(time_arr.size):
+            connect_mat_list += [get_connect_smat(prot_dat[:, :, i])]
+
+        avg_connect_mat = reduce(lambda x, y: x + y, connect_mat_list)
+
+    with h5py.File(connect_path, 'w') as h5_cnct:
+        _ = h5_cnct.create_dataset('time', data=time_arr)
+        _ = h5_cnct.create_dataset(
+            'avg_connect_mat', data=avg_connect_mat.toarray())
+        ac_arr = connect_autocorr(connect_mat_list[:])
+        _ = h5_cnct.create_dataset('autocorr', data=ac_arr)
 
 
 ##########################################

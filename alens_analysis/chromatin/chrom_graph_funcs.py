@@ -29,6 +29,7 @@ from matplotlib.patches import (Circle,
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator, NullFormatter)
 import matplotlib.colors as colors
+from itertools import cycle
 
 from .chrom_analysis import (get_link_energy_arrays, total_distr_hists,
                              get_all_rog_stats, cart_distr_hists,
@@ -741,6 +742,83 @@ def plot_condensate_avg_contact_vs_time(ax, time_arr, contact_kymo, cond_lst,
     ax.set_ylabel('Avg contact probability (bead$^{-1}$)')
 
 
+def graph_clust_snapshot(fig, axarr, com_arr, clust, cluster_centers, cluster_member_inds):
+    n_clusters = len(cluster_centers)
+    colors = [plt.cm.Spectral(each)
+              for each in np.linspace(0, 1, n_clusters)]
+
+    labels = clust.labels_
+
+    _ = axarr[0].scatter(com_arr[:, 0], com_arr[:, 1])
+    _ = axarr[1].scatter(com_arr[:, 0], com_arr[:, 2])
+    _ = axarr[0].set_ylabel('Y ($\mu$m)')
+    _ = axarr[1].set_ylabel('Z ($\mu$m)')
+    _ = axarr[3].set_xlabel('X ($\mu$m)')
+
+    for k, my_members, col in zip(range(n_clusters), cluster_member_inds, colors):
+        cluster_center = cluster_centers[k]
+        _ = axarr[2].scatter(com_arr[my_members, 0],
+                             com_arr[my_members, 1], color=col)
+        _ = axarr[3].scatter(com_arr[my_members, 0],
+                             com_arr[my_members, 2], color=col)
+        _ = axarr[2].plot(
+            cluster_center[0],
+            cluster_center[1],
+            "o",
+            markerfacecolor=col,
+            markeredgecolor="k",
+            markersize=14,
+        )
+        _ = axarr[3].plot(
+            cluster_center[0],
+            cluster_center[2],
+            "o",
+            markerfacecolor=col,
+            markeredgecolor="k",
+            markersize=14,
+        )
+
+    _ = axarr[2].set_ylabel('Y ($\mu$m)')
+    _ = axarr[3].set_ylabel('Z ($\mu$m)')
+    for ax in axarr:
+        _ = ax.set_aspect(1)
+
+    return fig, axarr
+
+
+def graph_cluster_and_tree_info_vs_time(axarr, time_arr, trees):
+    num_cluster_arr = np.zeros(time_arr.shape)
+    num_cluster_beads_arr = np.zeros(time_arr.shape)
+    for tree in trees:
+        time_lst = []
+        flat_time_lst = []
+        clust_ids = []
+        clust_centers = []
+        for clust in tree.clusters:
+            t_idx = np.where(time_arr == clust.time)
+            num_cluster_beads_arr[t_idx] += len(clust.part_ids)
+            time_lst += [clust.time]
+            clust_centers += [clust.center]
+
+            flat_time_lst += [clust.time]*len(clust.part_ids)
+            clust_ids += clust.part_ids.tolist()
+        _ = axarr[0, 0].scatter(time_lst, np.array(clust_centers)[:, 0])
+        _ = axarr[1, 0].scatter(flat_time_lst, clust_ids, s=.01, marker='.')
+
+    _ = axarr[0, 1].scatter(time_arr, num_cluster_arr)
+    _ = axarr[1, 1].scatter(time_arr, num_cluster_beads_arr)
+
+    _ = axarr[0, 0].set_ylabel('$x$-position ($\mu$m)')
+    _ = axarr[0, 1].set_ylabel('Number of clusters')
+    _ = axarr[1, 0].set_ylabel('Bead index')
+    _ = axarr[1, 1].set_ylabel('Number of beads in clusters')
+    for ax in axarr.flatten():
+        _ = ax.set_xlabel('Time (sec)')
+
+    _ = axarr[0, 1].set_ylim(0)
+    _ = axarr[1, 1].set_ylim(0)
+
+
 ##########################################
 if __name__ == "__main__":
-    print("Not implemented yet")
+    print("Not implemented")

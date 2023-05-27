@@ -9,8 +9,12 @@ Description:
 
 import numpy as np
 import warnings
+from sklearn.cluster import MeanShift, estimate_bandwidth, DBSCAN, OPTICS
+from numba import jit
 
-from ..helpers import gen_id
+from alens_analysis.helpers import gen_id
+
+# XXX This might be depricated soon
 
 
 class Condensate(object):
@@ -279,24 +283,6 @@ def next_pow_two(n):
     while i < n:
         i = i << 1
     return i
-
-
-def get_auto_corr_fast(pos_arr):
-    """Get the autocorrelation function for positions.
-
-    @param pos_arr  TODO
-    @return: TODO
-
-    """
-    nsteps = pos_arr.size
-    n = next_pow_two(nsteps)
-
-    # Compute the FFT and then (from that) the auto-correlation function
-    f = np.fft.fftn(pos_arr, s=[2 * n], axes=[-1])
-    pos_corr = np.fft.ifftn(f * np.conjugate(f))[:nsteps].real
-
-    pos_corr /= 4 * n
-    return pos_corr
 
 
 ##########################################
