@@ -17,7 +17,7 @@ setup_requirements = ['pytest-runner']
 
 test_requirements = ['pytest']
 
-with open('requirements_dev.txt', 'r') as f:
+with open('requirements.txt', 'r') as f:
     dev_requirements = [l for l in f.read().split('\n') if l.strip()]
 dev_requirements += requirements
 
