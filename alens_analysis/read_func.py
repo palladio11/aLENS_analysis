@@ -329,18 +329,19 @@ def convert_dat_to_hdf(fname="raw_data.h5", path=Path('.'), store_stress=False):
         print(f"Made protin data set in {t3-t2} seconds.")
 
         # Make stress data
-        if not is_zip:
-            # Get list of all constraint files, sort according to time
-            try:
-                h5_stress_path = fname.parent / f'stress_{path.stem}.h5'
-                con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
-                                       key=get_file_number)
-                bi_dset, col_dset = collect_stress_from_con_pvtp(
-                    h5_stress_path, path)
-                t4 = time.time()
-                print(f"Made stress data set in {t4-t3} seconds.")
-            except:
-                print("Could not make stress data.")
+        # if not is_zip:
+        #     # Get list of all constraint files, sort according to time
+        #     try:
+        #         h5_stress_path = fname.parent / f'stress_{path.stem}.h5'
+        #         con_dat_paths = sorted(result_dir.glob("**/ConBlock*.pvtp"),
+        #                                key=get_file_number)
+        #         bi_dset, col_dset = collect_stress_from_con_pvtp(
+        #             h5_stress_path, path)
+        #         t4 = time.time()
+        #         print(f"Made stress data set in {t4-t3} seconds.")
+        #     except Exception as e:
+        #         print(e)
+        #         print("Could not make stress data.")
 
         # Wall time analysis
         # Check to see if run.log is present in current simulation
