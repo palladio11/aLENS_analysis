@@ -26,7 +26,7 @@ from .rouse_mode_analysis import (get_rouse_modes_at_t,
                                   get_rouse_mode_corr_fast,)
 
 from . import chromatin
-from . import Util
+from .scripts import Util
 from . import hydro
 from . import helpers
 from . import nematic_order
