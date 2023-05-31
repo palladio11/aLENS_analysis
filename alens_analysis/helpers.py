@@ -107,8 +107,10 @@ def apply_pbc_to_sylinder(syl, box_lower, box_upper):
 def apply_pbc_to_raw_syl_data(raw_syl, box_lower, box_upper):
     """Make sure all sylinders are the proper length and in the box."""
     vec_apply_pbc_to_sylinder = np.vectorize(apply_pbc_to_sylinder, excluded=[1,2], signature='(n)->(n)')
+    # Need to reorder the array to vectorize. Move time dimension 'k' to the front
     tmp = np.einsum('ijk->kij', raw_syl)
     tmp = vec_apply_pbc_to_sylinder(tmp, box_lower, box_upper)
+    # Move time dimension back to the end
     return np.einsum('kij->ijk', tmp)
 
     
