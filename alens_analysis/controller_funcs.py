@@ -89,36 +89,36 @@ def seed_analysis(opts):
             f"Too many raw files. Please look in {str(opts.analysis_dir.resolve())} and choose one.")
         return
 
-    if opts.analysis == 'collect':
+    if getattr(opts, 'analysis', None) == 'collect':
         t0 = time.time()
         print(f'raw_{opts.path.stem}')
         convert_dat_to_hdf(h5_raw_path, opts.path)
         print(f" HDF5 raw created in {time.time() - t0}")
 
-    if opts.analysis == 'stress':
+    if getattr(opts, 'analysis', None) == 'stress':
         h5_stress_path = opts.analysis_dir / f'stress_{opts.path.stem}.h5'
         t0 = time.time()
         print(f'stress_{opts.path.stem}')
         collect_stress_from_con_pvtp(h5_stress_path, opts.path)
         print(f" HDF5 stress created in {time.time() - t0}")
 
-    if opts.analysis == 'cluster':
+    if getattr(opts, 'analysis', None) == 'cluster':
         t0 = time.time()
         create_cluster_hdf5(h5_raw_path, force=opts.force,
                             verbose=opts.verbose)
         print(f" HDF5 cluster file created in {time.time() - t0}")
 
-    if opts.analysis == 'connect':
+    if getattr(opts, 'analysis', None) == 'connect':
         t0 = time.time()
         create_connect_hdf5(h5_raw_path, force=opts.force,
                             verbose=opts.verbose)
         print(f" HDF5 connect file created in {time.time() - t0}")
 
-    if opts.movie:
+    if getattr(opts, 'movie', None):
         MOVIE_DICT[opts.movie](opts)
         return
 
-    if opts.graph:
+    if getattr(opts, 'graph', None):
         t0 = time.time()
         make_seed_graphs(opts)
         print(f" Graphs created in {time.time() - t0}")
