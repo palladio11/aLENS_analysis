@@ -46,16 +46,17 @@ def poly_bead_msd(com_arr, device='cpu'):
     return msd
 
 
-def dist_vs_idx_dist(com_arr):
-    sep_mat = np.linalg.norm(
-        com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=2)
-    avg_dist_arr = np.zeros((sep_mat.shape[0]))
-    avg_dist_sem_arr = np.zeros((sep_mat.shape[0]))
+def dist_vs_idx_dist(com_arr, device='cpu'):
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    sep_mat = torch.norm(
+        tcom_arr[:, None, :] - tcom_arr[None, :, :], dim=2)
+    avg_dist_arr = torch.zeros((sep_mat.shape[0]))
+    # avg_dist_sem_arr = torch.zeros((sep_mat.shape[0]))
     for i in range(1, sep_mat.shape[0]):
-        diag = np.diagonal(sep_mat, i)
+        diag = torch.diagonal(sep_mat, i)
         avg_dist_arr[i] = diag.mean()
-        avg_dist_sem_arr[i] = stats.sem(diag)
-    return avg_dist_arr, avg_dist_sem_arr
+    #     avg_dist_sem_arr[i] = stats.sem(diag)
+    return avg_dist_arr
 
 # def dist_vs_idx_dist_time_avg(com_arr):
 #     sep_mat = np.linalg.norm(com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=2)
@@ -273,12 +274,11 @@ def real_poly_response_func(iresp_arr):
     return (2/np.pi) * dst_arr
 
 
-def get_connect_smat(prot_arr):
-    nlinks = prot_arr.shape[0]
+def get_connect_smat(prot_arr, bead_num):
     xlinks = (prot_arr[:, -1] >= 0)
     xlink_coords = prot_arr[xlinks][:, -2:].astype(int)
     data = np.ones((xlink_coords.shape[0]))
-    return csr_matrix((data, (xlink_coords[:, 0], xlink_coords[:, 1])), shape=[nlinks, nlinks])
+    return csr_matrix((data, (xlink_coords[:, 0], xlink_coords[:, 1])), shape=[bead_num, bead_num])
 
 
 def connect_autocorr(connect_mat_list):
@@ -290,3 +290,13 @@ def connect_autocorr(connect_mat_list):
                 connect_mat_list[j+i]).sum()
         autocorr_arr[i] /= float(n-i)
     return autocorr_arr
+
+
+def get_connect_torch_smat(prot_arr, bead_num, device='cpu'):
+    xlinks = (prot_arr[:, -1] >= 0)
+    xlink_coords = prot_arr[xlinks][:, -2:].astype(int)
+    data = np.ones((xlink_coords.shape[0]))
+    tmp = coo_matrix((data, (xlink_coords[:, 0], xlink_coords[:, 1])), shape=[
+                     bead_num, bead_num])
+    tmp = torch.from_numpy(tmp.toarray()).to(device=device)
+    return tmp.to_sparse_csr()
