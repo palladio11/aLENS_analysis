@@ -579,9 +579,10 @@ def create_connect_hdf5(h5_raw_path, force=False, verbose=False):
     with h5py.File(h5_raw_path, 'r') as h5_data:
         time_arr = h5_data['time'][...]
         prot_dat = h5_data['raw_data/proteins'][...]
+        bead_num = h5_data['raw_data/sylinders'][...].shape[0]
         connect_mat_list = []
         for i in range(time_arr.size):
-            connect_mat_list += [get_connect_smat(prot_dat[:, :, i])]
+            connect_mat_list += [get_connect_smat(prot_dat[:, :, i], bead_num)]
 
         avg_connect_mat = reduce(lambda x, y: x + y, connect_mat_list)
 

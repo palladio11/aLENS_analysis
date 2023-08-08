@@ -291,6 +291,17 @@ def connect_autocorr(connect_mat_list):
         autocorr_arr[i] /= float(n-i)
     return autocorr_arr
 
+def connect_section_autocorr(connect_mat_list, range_list):
+    n = len(connect_mat_list)
+    autocorr_arr = np.zeros(n)
+    for i in range(n):
+        for j in range(n-i):
+            connect_comb = connect_mat_list[j].multiply(
+                connect_mat_list[j+i]).to_dense()
+            for k in range(range_list[0], range_list[1]):
+                autocorr_arr[i] += connect_comb.diagonal(k).sum()
+        autocorr_arr[i] /= float(n-i)
+    return autocorr_arr
 
 def get_connect_torch_smat(prot_arr, bead_num, device='cpu'):
     xlinks = (prot_arr[:, -1] >= 0)
