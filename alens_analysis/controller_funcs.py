@@ -111,7 +111,9 @@ def seed_analysis(opts):
     if getattr(opts, 'analysis', None) == 'connect':
         t0 = time.time()
         create_connect_hdf5(h5_raw_path, force=opts.force,
-                            verbose=opts.verbose)
+                            verbose=opts.verbose,
+                            start_ind=opts.start_index,
+                            end_ind=opts.end_index)
         print(f" HDF5 connect file created in {time.time() - t0}")
 
     if getattr(opts, 'movie', None):

@@ -25,7 +25,7 @@ from itertools import cycle
 
 from ..helpers import contiguous_regions
 
-from .chrom_poly_stats import get_connect_smat, connect_autocorr
+from .chrom_poly_stats import get_connect_torch_smat, get_connect_smat, connect_autocorr, connect_diag_autocorr
 
 
 def gauss_weighted_contact(sep_mat, sigma=.020, radius_arr=None):
@@ -564,10 +564,12 @@ def find_neighbors(com_arr, diam, time_ind=0):
     return neighbor_mat
 
 
-def create_connect_hdf5(h5_raw_path, force=False, verbose=False):
+def create_connect_hdf5(h5_raw_path, force=False, verbose=False, 
+                        start_ind=0, 
+                        end_ind=None):
     # Create path for cluster data file
     connect_path = (h5_raw_path.parent /
-                    f'connect_{h5_raw_path.parent.stem}.h5')
+                    f'connect_diag_analysis.h5')
     if connect_path.exists():
         if not force:
             print(
@@ -577,20 +579,22 @@ def create_connect_hdf5(h5_raw_path, force=False, verbose=False):
 
     # Run analysis
     with h5py.File(h5_raw_path, 'r') as h5_data:
-        time_arr = h5_data['time'][...]
-        prot_dat = h5_data['raw_data/proteins'][...]
+        time_arr = h5_data['time'][start_ind:end_ind]
+        lag_time_arr = time_arr - time_arr[0]
+        prot_dat = h5_data['raw_data/proteins'][:,:,start_ind:end_ind]
         bead_num = h5_data['raw_data/sylinders'][...].shape[0]
         connect_mat_list = []
         for i in range(time_arr.size):
-            connect_mat_list += [get_connect_smat(prot_dat[:, :, i], bead_num)]
+            connect_mat_list += [get_connect_torch_smat(prot_dat[:, :, i], bead_num)]
 
-        avg_connect_mat = reduce(lambda x, y: x + y, connect_mat_list)
+        avg_connect_mat = reduce(lambda x, y: x + y, connect_mat_list)/len(connect_mat_list)
 
     with h5py.File(connect_path, 'w') as h5_cnct:
         _ = h5_cnct.create_dataset('time', data=time_arr)
+        _ = h5_cnct.create_dataset('lag_time', data=lag_time_arr)
         _ = h5_cnct.create_dataset(
-            'avg_connect_mat', data=avg_connect_mat.toarray())
-        ac_arr = connect_autocorr(connect_mat_list[:])
+            'avg_connect_mat', data=avg_connect_mat.to_dense().numpy())
+        ac_arr = connect_diag_autocorr(connect_mat_list[:])
         _ = h5_cnct.create_dataset('autocorr', data=ac_arr)
 
 

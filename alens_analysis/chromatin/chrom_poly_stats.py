@@ -280,6 +280,15 @@ def get_connect_smat(prot_arr, bead_num):
     data = np.ones((xlink_coords.shape[0]))
     return csr_matrix((data, (xlink_coords[:, 0], xlink_coords[:, 1])), shape=[bead_num, bead_num])
 
+def get_connect_torch_smat(prot_arr, bead_num, device='cpu'):
+    xlinks = (prot_arr[:, -1] >= 0)
+    xlink_coords = prot_arr[xlinks][:, -2:].astype(int)
+    data = np.ones((xlink_coords.shape[0]))
+    tmp = coo_matrix((data, (xlink_coords[:, 0], xlink_coords[:, 1])), shape=[
+                     bead_num, bead_num])
+    tmp = torch.from_numpy(tmp.toarray()).to(device=device)
+    return tmp.to_sparse_csr()
+
 
 def connect_autocorr(connect_mat_list):
     n = len(connect_mat_list)
@@ -303,11 +312,18 @@ def connect_section_autocorr(connect_mat_list, range_list):
         autocorr_arr[i] /= float(n-i)
     return autocorr_arr
 
-def get_connect_torch_smat(prot_arr, bead_num, device='cpu'):
-    xlinks = (prot_arr[:, -1] >= 0)
-    xlink_coords = prot_arr[xlinks][:, -2:].astype(int)
-    data = np.ones((xlink_coords.shape[0]))
-    tmp = coo_matrix((data, (xlink_coords[:, 0], xlink_coords[:, 1])), shape=[
-                     bead_num, bead_num])
-    tmp = torch.from_numpy(tmp.toarray()).to(device=device)
-    return tmp.to_sparse_csr()
+def connect_diag_autocorr(connect_mat_list):
+    n_steps = len(connect_mat_list) 
+    n_beads =  connect_mat_list[0].shape[0] 
+    autocorr_arr = np.zeros((n_steps, n_beads))
+    for tau in range(n_steps):
+        for t in range(n_steps-tau):
+            connect_comb = connect_mat_list[t].multiply(
+                connect_mat_list[t+tau]).to_dense()
+            for d in range(n_beads):
+                autocorr_arr[tau, d] += connect_comb.diagonal(d).sum()
+                autocorr_arr[tau, d] += connect_comb.diagonal(-d).sum()
+        autocorr_arr[tau] /= float(n_steps-tau)
+    return autocorr_arr
+
+
