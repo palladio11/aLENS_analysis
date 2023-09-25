@@ -23,7 +23,7 @@ from scipy.signal import savgol_filter
 # Clustering stuff
 from itertools import cycle
 
-from ..helpers import contiguous_regions
+from ..helpers import contiguous_regions, Timer
 
 from .chrom_poly_stats import get_connect_torch_smat, get_connect_smat, connect_autocorr, connect_diag_autocorr
 
@@ -458,7 +458,7 @@ def rad_distr_func_at_t(dist_mat, nbins=100, hist_max=1., orig_density=1):
     dr = rad_bin_edges[1:] - rad_bin_edges[:-1]
     rad = .5 * (rad_bin_edges[1:] + rad_bin_edges[:-1])
     rad_distr_func = np.divide(
-        rad_distr_func,  np.pi * np.power(rad, 2.) * dr * orig_density * dist_mat.size)
+        rad_distr_func, np.pi * np.power(rad, 2.) * dr * orig_density * dist_mat.size)
     return (rad_distr_func, rad_bin_edges)
 
 
@@ -476,15 +476,15 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
 
 def get_contact_mat_analysis(com_arr, sigma=.02, avg_block_step=1, log=True,
                              radius_arr=None, analysis=None):
-    """Generate (and store if given an HDF5 directory) all analysis related to 
-    contact matrices related to chromatin. This is includes separation matrix at 
-    every time point (this is not stored because of the size), average contact 
+    """Generate (and store if given an HDF5 directory) all analysis related to
+    contact matrices related to chromatin. This is includes separation matrix at
+    every time point (this is not stored because of the size), average contact
     matrix, and contact kymograph.
 
     Parameters
     ----------
     com_arr : NxDxT ndarray
-        Matrix of particles centers of masses 
+        Matrix of particles centers of masses
     sigma : float, optional
         _description_, by default .02
     avg_block_step : int, optional
@@ -564,8 +564,8 @@ def find_neighbors(com_arr, diam, time_ind=0):
     return neighbor_mat
 
 
-def create_connect_hdf5(h5_raw_path, force=False, verbose=False, 
-                        start_ind=0, 
+def create_connect_hdf5(h5_raw_path, force=False, verbose=False,
+                        start_ind=0,
                         end_ind=None):
     # Create path for cluster data file
     connect_path = (h5_raw_path.parent /
@@ -581,21 +581,30 @@ def create_connect_hdf5(h5_raw_path, force=False, verbose=False,
     with h5py.File(h5_raw_path, 'r') as h5_data:
         time_arr = h5_data['time'][start_ind:end_ind]
         lag_time_arr = time_arr - time_arr[0]
-        prot_dat = h5_data['raw_data/proteins'][:,:,start_ind:end_ind]
+        prot_dat = h5_data['raw_data/proteins'][:, :, start_ind:end_ind]
         bead_num = h5_data['raw_data/sylinders'][...].shape[0]
         connect_mat_list = []
+        # timer = Timer()
         for i in range(time_arr.size):
-            connect_mat_list += [get_connect_torch_smat(prot_dat[:, :, i], bead_num)]
+            connect_mat_list += [get_connect_torch_smat(
+                prot_dat[:, :, i], bead_num)]
+        # timer.log()
 
-        avg_connect_mat = reduce(lambda x, y: x + y, connect_mat_list)/len(connect_mat_list)
+        # timer.milestone()
+        n = len(connect_mat_list)
+        avg_connect_mat = reduce(lambda x, y: x + y, connect_mat_list)
+        avg_connect_mat = avg_connect_mat.to_dense().numpy() / n
+        # timer.log()
 
     with h5py.File(connect_path, 'w') as h5_cnct:
         _ = h5_cnct.create_dataset('time', data=time_arr)
         _ = h5_cnct.create_dataset('lag_time', data=lag_time_arr)
-        _ = h5_cnct.create_dataset(
-            'avg_connect_mat', data=avg_connect_mat.to_dense().numpy())
+        _ = h5_cnct.create_dataset('avg_connect_mat', data=avg_connect_mat)
+
+        # timer.milestone()
         ac_arr = connect_diag_autocorr(connect_mat_list[:])
         _ = h5_cnct.create_dataset('autocorr', data=ac_arr)
+        # timer.log()
 
 
 ##########################################

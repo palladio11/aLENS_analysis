@@ -9,6 +9,24 @@ Description:
 
 import numpy as np
 
+import time
+
+
+class Timer:
+
+    def __init__(self):
+        self.start = time.time()
+
+    def start(self):
+        self.start = time.time()
+
+    def log(self):
+        logger = time.time() - self.start
+        print('Time log -', logger)
+
+    def milestone(self):
+        self.start = time.time()
+
 
 def gen_id():
     i = 0
@@ -74,9 +92,10 @@ def find_steady_state_ind(arr, avg_inv=(0, None)):
     std = arr[avg_inv[0]:avg_inv[1]].std()
     # Reaching steady-state from a smaller value
     if avg > arr[0]:
-        return (arr >= (avg-std)).nonzero()[0][0]
+        return (arr >= (avg - std)).nonzero()[0][0]
     # Reaching steady-steady from a larger value
-    return (arr <= (avg+std)).nonzero()[0][0]
+    return (arr <= (avg + std)).nonzero()[0][0]
+
 
 def apply_pbc_to_sylinder(syl, box_lower, box_upper):
     """Make sure sylinder is the proper length and in the box."""
@@ -87,11 +106,11 @@ def apply_pbc_to_sylinder(syl, box_lower, box_upper):
     box_vec = box_upper - box_lower
     # Adjust the plus end to satisfy PBC
     for i in range(3):
-        if  vec[i] > 0.5 * box_vec[i]:
+        if vec[i] > 0.5 * box_vec[i]:
             plus_end[i] -= box_vec[i]
         elif vec[i] < -0.5 * box_vec[i]:
             plus_end[i] += box_vec[i]
-    
+
     # Make sure the sylinder is still in the box
     syl_center = .5 * (plus_end + minus_end)
     for i in range(3):
@@ -101,17 +120,18 @@ def apply_pbc_to_sylinder(syl, box_lower, box_upper):
         elif syl_center[i] < box_lower[i]:
             plus_end[i] += box_vec[i]
             minus_end[i] += box_vec[i]
-    
+
     return np.concatenate((syl[:2], minus_end, plus_end, syl[8:]))
+
 
 def apply_pbc_to_raw_syl_data(raw_syl, box_lower, box_upper):
     """Make sure all sylinders are the proper length and in the box."""
-    vec_apply_pbc_to_sylinder = np.vectorize(apply_pbc_to_sylinder, excluded=[1,2], signature='(n)->(n)')
-    # Need to reorder the array to vectorize. Move time dimension 'k' to the front
+    vec_apply_pbc_to_sylinder = np.vectorize(
+        apply_pbc_to_sylinder, excluded=[
+            1, 2], signature='(n)->(n)')
+    # Need to reorder the array to vectorize. Move time dimension 'k' to the
+    # front
     tmp = np.einsum('ijk->kij', raw_syl)
     tmp = vec_apply_pbc_to_sylinder(tmp, box_lower, box_upper)
     # Move time dimension back to the end
     return np.einsum('kij->ijk', tmp)
-
-    
-

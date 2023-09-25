@@ -50,13 +50,24 @@ def dist_vs_idx_dist(com_arr, device='cpu'):
     tcom_arr = torch.from_numpy(com_arr).to(device)
     sep_mat = torch.norm(
         tcom_arr[:, None, :] - tcom_arr[None, :, :], dim=2)
-    avg_dist_arr = torch.zeros((sep_mat.shape[0]))
+    avg_dist_arr = torch.zeros((sep_mat.shape[0]-1))
     # avg_dist_sem_arr = torch.zeros((sep_mat.shape[0]))
     for i in range(1, sep_mat.shape[0]):
         diag = torch.diagonal(sep_mat, i)
-        avg_dist_arr[i] = diag.mean()
+        avg_dist_arr[i-1] = diag.mean()
     #     avg_dist_sem_arr[i] = stats.sem(diag)
     return avg_dist_arr
+
+def contact_vs_idx_dist(com_arr, contact_thresh, device='cpu'):
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    sep_mat = torch.norm(
+        tcom_arr[:, None, :] - tcom_arr[None, :, :], dim=2)
+    contact_mat = (sep_mat < contact_thresh).float()
+    avg_cont_arr = torch.zeros((sep_mat.shape[0]-1))
+    for i in range(1, contact_mat.shape[0]):
+        diag = torch.diagonal(contact_mat, i)
+        avg_cont_arr[i-1] = diag.mean()
+    return avg_cont_arr
 
 # def dist_vs_idx_dist_time_avg(com_arr):
 #     sep_mat = np.linalg.norm(com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=2)
