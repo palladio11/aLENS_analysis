@@ -179,7 +179,7 @@ def read_sylinder_data(syl_paths, posit_grp):
     for frame, syl_path in tqdm(enumerate(syl_paths), total=len(syl_paths), disable=True):
         filaments = read_dat_sylinder(syl_path)
         data_arr = [fil.get_dat()
-                    for fil in filaments if (fil.fil_type != 'L')]
+                    for fil in filaments if (fil.fil_type == 'C' or fil.fil_type == 'S')]
         sy_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
     return sy_dset
 
