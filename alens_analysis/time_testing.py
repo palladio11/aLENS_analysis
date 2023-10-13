@@ -14,6 +14,7 @@ from subprocess import run
 from .runlog_funcs import get_walltime, get_wt_timestep, calc_timestep_stats
 import toml
 import yaml
+from pprint import pprint
 
 
 def run_time_testing(n_time_steps, opts):
@@ -42,7 +43,10 @@ def run_time_testing(n_time_steps, opts):
         with rc_path.open('r') as rcf:
             params = yaml.safe_load(rcf)
             omp_num_threads = params.get('omp_num_threads', 1)
-            print(omp_num_threads)
+            if opts.omp_num_threads:
+                print("   ! Overwriting OMP_NUM_THREADS in RunConfig.yaml. !")
+                omp_num_threads = opts.omp_num_threads
+            print("Number of OMP threads =", omp_num_threads)
             dt = float(params['dt'])
             params['timeTotal'] = dt * float(n_time_steps)
             # Don't write out during this process
@@ -62,8 +66,8 @@ def run_time_testing(n_time_steps, opts):
         # Analyze runlog.out for run information
         tot_walltime = get_walltime(out_path)
 
-        stats = {'total_walltime': float(tot_walltime.total_seconds())}
-        stats['wt_mean'], stats['median'], stats['wt_std'], stats['wt_max'] = calc_timestep_stats(
+        stats = {'total walltime': float(tot_walltime.total_seconds())}
+        stats['mean step walltime'], stats['median step walltime'], stats['std of step walltime'], stats['max step walltime'] = calc_timestep_stats(
             out_path)
         # Put time analysis file in the analysis directory
         # (create if necessary)
@@ -71,6 +75,8 @@ def run_time_testing(n_time_steps, opts):
         analysis_dir.mkdir(exist_ok=True)
         with (analysis_dir / 'timing.toml').open('w') as tf:
             toml.dump(stats, tf)
+        print("Run time stats")
+        pprint(stats, sort_dicts=False)
 
     except BaseException:
         raise

@@ -67,7 +67,11 @@ def parse_args():
     parser.add_argument("-T", "--time_testing",
                         type=int,
                         default=0,
-                        help="Run aLENS in a directory one lower, collect the runtime statistics and put them in file located in the analysis directory.")
+                        help="Run aLENS in a directory one lower, collect the runtime statistics and put them in file located in the analysis directory. Takes in number of steps to run.")
+    parser.add_argument("-nt", "--omp_num_threads",
+                        type=int,
+                        default=0,
+                        help="Run aLENS in a directory one lower, collect the runtime statistics and put them in file located in the analysis directory. Takes in number of steps to run.")
 
     parser.add_argument("-f ", "--force", action='store_true',
                         help="Force analysis to occur. Overwrite previous analysis done.")
