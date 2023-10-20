@@ -43,6 +43,12 @@ def parse_args():
                         default=None,
                         help=" Specify analysis and what hdf5 file will be written.")
 
+    parser.add_argument("-s ", "--start_index", type=int, default=0,
+                        help=" At what time index to start analysis.")
+
+    parser.add_argument("-e ", "--end_index", type=int, default=None,
+                        help=" At what time index to end analysis.")
+
     parser.add_argument("-t", "--type",
                         choices=[
                             "seed",
@@ -65,10 +71,12 @@ def parse_args():
 
     parser.add_argument("-f ", "--force", action='store_true',
                         help="Force analysis to occur. Overwrite previous analysis done.")
+
     parser.add_argument("-v ", "--verbose", action='store_true',
                         help="Output more information to stdout.")
 
-    parser.add_argument("-M", "--movie", choices=[None, "hic", "hic_only", "min"], default=None,
+    parser.add_argument("-M", "--movie", choices=[None, "hic", "hic_only", "min"],
+                        default=None,
                         help=("Create an animation from a seed. "
                               "hic: movie with instantaneous Hi-C map"
                               "min: images only"))

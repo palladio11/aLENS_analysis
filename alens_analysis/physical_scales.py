@@ -8,6 +8,7 @@ Description:
 """
 
 import numpy as np
+from scipy.special import erf
 import yaml
 import h5py
 
@@ -52,12 +53,19 @@ def get_pfract(n_chrom, rad_chrom, n_crowd, rad_crowd, rad_sys):
     rad_sys : float
         Radius of the confining sphere
 
+
     Returns
     -------
     float
         Packing fraction of the beads to total space available.
     """
     return (n_chrom * (rad_chrom**3) + n_crowd * (rad_crowd**3)) / (rad_sys**3)
+
+def calc_sticky_search_volume(l, ks, kbT=4.11e-3):
+    a = .5 * ks / kbT
+    return 4*np.pi*((1. + (2*a*l*l))*np.sqrt(np.pi)*(1. + erf(np.sqrt(a)*l))) /(4.*np.power(a, 1.5)) + (3. * np.exp(-a*l*l)*l)/(2*a)
+    
+
 
 
 def get_fundamental_consts(h5_path):
