@@ -104,7 +104,6 @@ def get_contact_kymo_data(contact_mat):
 
     """
     # Remove interaction with self
-    # contact_kymo =
     return (np.sum(contact_mat, axis=0) - 1)
 
 
@@ -475,7 +474,7 @@ def get_all_rog_stats(pos_mat, rel_ind=0):
 
 
 def get_contact_mat_analysis(com_arr, sigma=.02, avg_block_step=1, log=True,
-                             radius_arr=None, analysis=None):
+                             radius_arr=None, h5_obj=None):
     """Generate (and store if given an HDF5 directory) all analysis related to
     contact matrices related to chromatin. This is includes separation matrix at
     every time point (this is not stored because of the size), average contact
@@ -502,34 +501,38 @@ def get_contact_mat_analysis(com_arr, sigma=.02, avg_block_step=1, log=True,
         _description_
     """
     reduc_com_arr = com_arr[::avg_block_step, :, :]  # simple downsampling
+    n_beads = reduc_com_arr.shape[0]
+    n_time = reduc_com_arr.shape[-1]
+    avg_contact_mat = np.zeros((n_beads, n_beads))
+    contact_kymo = np.zeros((n_beads, n_time))
 
-    sep_mat = np.linalg.norm(
-        reduc_com_arr[:, np.newaxis, :, :] - reduc_com_arr[np.newaxis, :, :, :], axis=2)
-    # log_contact_mat = log_gauss_weighted_contact(sep_mat, sigma)
-    contact_mat = gauss_weighted_contact(sep_mat, sigma, radius_arr)
-    contact_kymo = get_contact_kymo_data(contact_mat)
+    for i in range(reduc_com_arr.shape[-1]):
+        sep_mat = np.linalg.norm(
+            reduc_com_arr[:, np.newaxis, :, i] - reduc_com_arr[np.newaxis, :, :, i], axis=2)
+        contact_mat = gauss_weighted_contact(sep_mat, sigma)
+        contact_kymo[:, i] = get_contact_kymo_data(contact_mat)
+        avg_contact_mat += contact_mat
 
     if log:
-        avg_contact_mat = np.log(contact_mat.mean(axis=-1))
-    else:
-        avg_contact_mat = contact_mat.mean(axis=-1)
+        avg_contact_mat = np.log(avg_contact_mat)
 
-    if analysis is not None:
-        avg_contact_mat_dset = analysis.create_dataset('avg_contact_mat',
-                                                       data=avg_contact_mat)
+    if h5_obj is not None:
+        avg_contact_mat_dset = h5_obj.create_dataset('avg_contact_mat',
+                                                     data=avg_contact_mat)
         avg_contact_mat_dset.attrs['sigma'] = sigma
         avg_contact_mat_dset.attrs['avg_block_step'] = avg_block_step
         avg_contact_mat_dset.attrs['log'] = log
 
-        contact_kymo = analysis.create_dataset('contact_kymo',
-                                               data=contact_kymo)
-        contact_kymo.attrs['sigma'] = sigma
-        contact_kymo.attrs['avg_block_step'] = avg_block_step
-        # contact_kymo.attrs['log'] = log
+        contact_kymo_dset = h5_obj.create_dataset('contact_kymo',
+                                                  data=contact_kymo)
+        contact_kymo_dset.attrs['sigma'] = sigma
+        contact_kymo_dset.attrs['avg_block_step'] = avg_block_step
+        contact_kymo_dset.attrs['log'] = log
+
         if radius_arr is not None:
             avg_contact_mat_dset.attrs['radius_arr'] = radius_arr
-            contact_kymo.attrs['radius_arr'] = radius_arr
-    return avg_contact_mat, contact_mat, contact_kymo
+            contact_kymo_dset.attrs['radius_arr'] = radius_arr
+    return avg_contact_mat, contact_kymo
 
 
 def get_end_end_distance(com_arr):
@@ -605,6 +608,38 @@ def create_connect_hdf5(h5_raw_path, force=False, verbose=False,
         ac_arr = connect_diag_autocorr(connect_mat_list[:])
         _ = h5_cnct.create_dataset('autocorr', data=ac_arr)
         # timer.log()
+
+
+def create_contact_hdf5(h5_raw_path, force=False,
+                        verbose=False, start_ind=0, end_ind=None):
+    """TODO: Docstring for create_contact_hdf5.
+
+    @param h5_raw_path TODO
+    @param force TODO
+    @param verbos TODO
+    @param start_ind TODO
+    @param end_ind TODO
+    @return: TODO
+
+    """
+    contact_path = (h5_raw_path.parent /
+                    f'contact_analysis.h5')
+    if contact_path.exists():
+        if not force:
+            print(
+                f"Warning: connect data file {contact_path.name} exists and was NOT overwritten.")
+            return
+        contact_path.unlink()
+
+    # Run analysis
+    with h5py.File(h5_raw_path, 'r') as h5_data:
+        time_arr = h5_data['time'][start_ind:end_ind]
+        sy_dat = h5_data['raw_data/sylinders'][:, :, start_ind:end_ind]
+        com_arr = .5 * (sy_dat[:, 2:5, :] + sy_dat[:, 5:8, :])
+
+    with h5py.File(contact_path, 'w') as h5_contact:
+        _ = h5_contact.create_dataset('time', data=time_arr)
+        _ = get_contact_mat_analysis(com_arr, h5_obj=h5_contact)
 
 
 ##########################################

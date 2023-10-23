@@ -38,6 +38,7 @@ def parse_args():
                                  'collect',
                                  'cluster',
                                  'connect',
+                                 'contact',
                                  'stress'
                                  ],
                         default=None,

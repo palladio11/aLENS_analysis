@@ -21,7 +21,7 @@ from .min_animation import min_animation
 from .result_to_pvd import make_pvd_files
 from .runlog_funcs import get_walltime
 from .cluster_analysis import create_cluster_hdf5
-from .chromatin.chrom_analysis import create_connect_hdf5
+from .chromatin.chrom_analysis import create_connect_hdf5, create_contact_hdf5
 
 MOVIE_DICT = {
     'hic': hic_animation,
@@ -115,6 +115,12 @@ def seed_analysis(opts):
                             start_ind=opts.start_index,
                             end_ind=opts.end_index)
         print(f" HDF5 connect file created in {time.time() - t0}")
+
+    if getattr(opts, 'analysis', None) == 'contact':
+        t0 = time.time()
+        create_contact_hdf5(h5_raw_path, force=opts.force,
+                            verbose=opts.verbose)
+        print(f" HDF5 contact file created in {time.time() - t0}")
 
     if getattr(opts, 'movie', None):
         MOVIE_DICT[opts.movie](opts)
