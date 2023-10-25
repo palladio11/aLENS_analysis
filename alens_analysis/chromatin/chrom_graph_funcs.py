@@ -767,7 +767,7 @@ def graph_clust_snapshot(fig, axarr, com_arr, clust, cluster_centers, cluster_me
             "o",
             markerfacecolor=col,
             markeredgecolor="k",
-            markersize=14,
+            markersize=8,
         )
         _ = axarr[3].plot(
             cluster_center[0],
@@ -775,7 +775,7 @@ def graph_clust_snapshot(fig, axarr, com_arr, clust, cluster_centers, cluster_me
             "o",
             markerfacecolor=col,
             markeredgecolor="k",
-            markersize=14,
+            markersize=8,
         )
 
     _ = axarr[2].set_ylabel('Y ($\mu$m)')
