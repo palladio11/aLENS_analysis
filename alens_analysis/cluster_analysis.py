@@ -122,7 +122,7 @@ class ClusterTree(object):
         self.clusters += [clust]
 
         for prog in clust.progenitors:
-            assert(prog != clust)
+            assert (prog != clust)
             self.add_recursive(prog)
             clust.mass_hist += prog.mass_hist
 
@@ -182,6 +182,22 @@ class AllClusterTrees(object):
 
 
 def find_descendants(clusters, thresh=.6, nskip=1):
+    """Find descendants of a time series of clusters
+
+    Parameters
+    ----------
+    clusters : _type_
+        _description_
+    thresh : float, optional
+        The threshold for cluster similarity between consecutive clusters. When clusters are compared they are considered to be of the same lineages if the fractional similarity of bead ids are the same. Default .6
+    nskip : int, optional
+        Clusters may go in and out of existence because of DBSCANS cut off. We allow for a certain amount frame skips so that minimal clusters don't go overlooked, by default 1
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
     for t in clusters:
         for clust in t:
             clust.reset_history()
@@ -205,7 +221,7 @@ def find_descendants(clusters, thresh=.6, nskip=1):
                 if best_score > thresh * min(len(cur.part_ids), cand_size):
                     cur.descendant = best_cand
                     best_cand.progenitors += [cur]
-                    assert(best_cand != cur)
+                    assert (best_cand != cur)
                     break
 
                 # Don't look for a snapshot that is beyond the time index i+s
@@ -216,14 +232,14 @@ def find_descendants(clusters, thresh=.6, nskip=1):
                 root_clusters += [cur]
     # For clusters existing at last time point, add them to root clusters
     for clust in clusters[-1]:
-        assert(clust.descendant is None)
+        assert (clust.descendant is None)
         root_clusters += [clust]
 
     return root_clusters
 
 
 def identify_spatial_clusters(com_arr,
-                              eps=0.05, min_samples=12, thresh=20, verbose=True, 
+                              eps=0.05, min_samples=12, thresh=20, verbose=True,
                               **kwargs):
     clust = OPTICS(min_samples=min_samples, eps=eps, cluster_method='dbscan')
     clust.fit(com_arr)

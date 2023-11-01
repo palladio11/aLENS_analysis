@@ -105,9 +105,9 @@ def seed_analysis(opts):
     if getattr(opts, 'analysis', None) == 'cluster':
         t0 = time.time()
         # TODO: put these options in aa_controller.py
-        opts.eps = .02
+        opts.eps = .025
         opts.min_samples = 20
-        opts.threshold = 20
+        opts.threshold = 1
 
         create_cluster_hdf5(h5_raw_path, **opts.__dict__)
         print(f" HDF5 cluster file created in {time.time() - t0}")
