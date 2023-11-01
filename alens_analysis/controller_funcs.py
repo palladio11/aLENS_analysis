@@ -81,7 +81,7 @@ def seed_analysis(opts):
     # find raw data path
     raw_files = list(opts.analysis_dir.glob('raw*.h5'))
     if not raw_files:
-        h5_raw_path = opts.analysis_dir / f'raw_{opts.path.stem}.h5'
+        h5_raw_path = opts.analysis_dir / f'raw_data.h5'
     elif len(raw_files) == 1:
         h5_raw_path = raw_files[0]
     else:
@@ -91,12 +91,12 @@ def seed_analysis(opts):
 
     if getattr(opts, 'analysis', None) == 'collect':
         t0 = time.time()
-        print(f'raw_{opts.path.stem}')
+        print(f'raw_data')
         convert_dat_to_hdf(h5_raw_path, opts.path)
         print(f" HDF5 raw created in {time.time() - t0}")
 
     if getattr(opts, 'analysis', None) == 'stress':
-        h5_stress_path = opts.analysis_dir / f'stress_{opts.path.stem}.h5'
+        h5_stress_path = opts.analysis_dir / f'stress_data.h5'
         t0 = time.time()
         print(f'stress_{opts.path.stem}')
         collect_stress_from_con_pvtp(h5_stress_path, opts.path)
@@ -104,8 +104,12 @@ def seed_analysis(opts):
 
     if getattr(opts, 'analysis', None) == 'cluster':
         t0 = time.time()
-        create_cluster_hdf5(h5_raw_path, force=opts.force,
-                            verbose=opts.verbose)
+        # TODO: put these options in aa_controller.py
+        opts.eps = .02
+        opts.min_samples = 20
+        opts.threshold = 20
+
+        create_cluster_hdf5(h5_raw_path, **opts.__dict__)
         print(f" HDF5 cluster file created in {time.time() - t0}")
 
     if getattr(opts, 'analysis', None) == 'connect':

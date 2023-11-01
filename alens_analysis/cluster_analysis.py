@@ -223,7 +223,8 @@ def find_descendants(clusters, thresh=.6, nskip=1):
 
 
 def identify_spatial_clusters(com_arr,
-                              eps=0.05, min_samples=12, thresh=20, verbose=True):
+                              eps=0.05, min_samples=12, thresh=20, verbose=True, 
+                              **kwargs):
     clust = OPTICS(min_samples=min_samples, eps=eps, cluster_method='dbscan')
     clust.fit(com_arr)
     labels = clust.labels_
@@ -324,8 +325,7 @@ def make_cluster_trees(clusters,
 
 def create_cluster_hdf5(anal_file_path,
                         ss_ind=1, end_ind=None, start_bead=0, end_bead=None,
-                        thresh=20, force=True, verbose=False
-                        ):
+                        force=True, **kwargs):
 
     # Create path for cluster data file
     clust_path = (anal_file_path.parent /
@@ -354,7 +354,7 @@ def create_cluster_hdf5(anal_file_path,
             time_grp = clust_grp.create_group(f'time_{t}')
             time_grp.attrs['time'] = t
             clust, cluster_centers, cluster_label_inds = identify_spatial_clusters(
-                com_arr[:, :, i], thresh=thresh, verbose=verbose)
+                com_arr[:, :, i], **kwargs)
             for cli, cc in zip(cluster_label_inds, cluster_centers):
                 cluster = Cluster(next(id_gen), t, cli, cc)
                 cluster.write_clust_to_hdf5_dset(time_grp)

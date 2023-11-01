@@ -749,8 +749,8 @@ def graph_clust_snapshot(fig, axarr, com_arr, clust, cluster_centers, cluster_me
 
     labels = clust.labels_
 
-    _ = axarr[0].scatter(com_arr[:, 0], com_arr[:, 1])
-    _ = axarr[1].scatter(com_arr[:, 0], com_arr[:, 2])
+    _ = axarr[0].scatter(com_arr[:, 0], com_arr[:, 1], s=.5)
+    _ = axarr[1].scatter(com_arr[:, 0], com_arr[:, 2], s=.5)
     _ = axarr[0].set_ylabel('Y ($\mu$m)')
     _ = axarr[1].set_ylabel('Z ($\mu$m)')
     _ = axarr[3].set_xlabel('X ($\mu$m)')
@@ -758,9 +758,9 @@ def graph_clust_snapshot(fig, axarr, com_arr, clust, cluster_centers, cluster_me
     for k, my_members, col in zip(range(n_clusters), cluster_member_inds, colors):
         cluster_center = cluster_centers[k]
         _ = axarr[2].scatter(com_arr[my_members, 0],
-                             com_arr[my_members, 1], color=col)
+                             com_arr[my_members, 1], color=col, s=.5)
         _ = axarr[3].scatter(com_arr[my_members, 0],
-                             com_arr[my_members, 2], color=col)
+                             com_arr[my_members, 2], color=col, s=.5)
         _ = axarr[2].plot(
             cluster_center[0],
             cluster_center[1],
