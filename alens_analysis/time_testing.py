@@ -73,7 +73,7 @@ def run_time_testing(n_time_steps, opts):
         # (create if necessary)
         analysis_dir = start_dir / 'analysis'
         analysis_dir.mkdir(exist_ok=True)
-        with (analysis_dir / 'timing.toml').open('w') as tf:
+        with (analysis_dir / f'timing_threads_{omp_num_threads}.toml').open('w') as tf:
             toml.dump(stats, tf)
         print("Run time stats")
         pprint(stats, sort_dicts=False)
