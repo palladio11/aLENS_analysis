@@ -1,5 +1,6 @@
-pytorch 
-nomkl 
+#pytorch 
+#nomkl
+torch 
 scikit-learn 
 numpy 
 h5py 
