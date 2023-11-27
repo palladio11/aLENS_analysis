@@ -623,7 +623,7 @@ def plot_condensate_characterize(
 
 
 def plot_contact_kymo(fig, ax, time_arr, contact_kymo,
-                      contact_type="", vmax=10):
+                      contact_type="", vmax=10, label_flag=True):
     """TODO: Docstring for plot_contact_kymo.
 
     @param ax TODO
@@ -637,13 +637,16 @@ def plot_contact_kymo(fig, ax, time_arr, contact_kymo,
     X, Y = np.meshgrid(x, y)
     if contact_type == "log":
         c = ax.pcolorfast(X, Y, np.log(contact_kymo))
-        _ = fig.colorbar(c, ax=ax, label="Log sum contact \n probability")
+        if label_flag:
+            _ = fig.colorbar(c, ax=ax, label="Log sum contact \n probability")
     else:
         c = ax.pcolorfast(X, Y, contact_kymo, vmax=vmax)
-        _ = fig.colorbar(c, ax=ax, label=r"Contact probability")
-    _ = ax.set_title("Contact probabilty 'kymograph'")
-    ax.set_xlabel("Time $t$ (sec)")
-    ax.set_ylabel("Bead index")
+        if label_flag:
+            _ = fig.colorbar(c, ax=ax, label=r"Contact probability")
+    if label_flag:
+        _ = ax.set_title("Contact probabilty 'kymograph'")
+        ax.set_xlabel("Time $t$ (sec)")
+        ax.set_ylabel("Bead index")
     return
 
 
