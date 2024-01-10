@@ -285,7 +285,7 @@ gidTF2D = GetTransferFunction2D('gid')
 gidLUT = GetColorTransferFunction('gid')
 gidLUT.TransferFunction2D = gidTF2D
 gidLUT.RGBPoints = [0.0, 0.0, 0.0, 0.8, 45.04835164835165, 0.0, 0.0,
-                    0.8, 153.95164835164834, 0.8, 0.3, 0.3, 199.0, 0.0, 0.695201, 0.5]
+                    0.8, 153.95164835164834, 0.8, 0.3, 0.3, 1599.0, 0.0, 0.695201, 0.5]
 gidLUT.ColorSpace = 'Step'
 gidLUT.NanColor = [0.803922, 0.0, 0.803922]
 gidLUT.ScalarRangeInitialized = 1.0
@@ -293,10 +293,11 @@ gidLUT.ScalarRangeInitialized = 1.0
 # get opacity transfer function/opacity map for 'gid'
 gidPWF = GetOpacityTransferFunction('gid')
 gidPWF.Points = [0.0, 0.0, 0.5, 0.0, 44.72638338901767,
-                 0.30000001192092896, 0.5, 0.0, 199.0, 1.0, 0.5, 0.0]
+                 0.30000001192092896, 0.5, 0.0, 1599.0, 1.0, 0.5, 0.0]
 gidPWF.ScalarRangeInitialized = 1
 
-# Apply a preset using its name. Note this may not work as expected when presets have duplicate names.
+# Apply a preset using its name. Note this may not work as expected when
+# presets have duplicate names.
 gidLUT.ApplyPreset('Rainbow Uniform', True)
 
 # hide color bar/color legend
@@ -333,11 +334,11 @@ SetActiveView(None)
 # Adjust camera
 
 # current camera placement for renderView1
-renderView1.CameraPosition = [0.24874988563699163,
-                              0.00019760412025856405, 1.1148423714909423]
-renderView1.CameraFocalPoint = [
-    0.24874988563699163, 0.00019760412025856405, 4.898482660470327e-08]
-renderView1.CameraParallelScale = 0.28854242535090935
+# renderView1.CameraPosition = [0.24874988563699163,
+# 0.00019760412025856405, 3.1148423714909423]
+# renderView1.CameraFocalPoint = [
+# 0.24874988563699163, 0.00019760412025856405, 4.898482660470327e-08]
+# renderView1.CameraParallelScale = 0.28854242535090935
 
 # Create a new 'Python View'
 pythonView1 = CreateView('PythonView')
@@ -388,7 +389,7 @@ from matplotlib.collections import LineCollection
 
 
 def gauss_weighted_contact(sep_mat, sigma=.010):
-    return np.exp(-np.power(sep_mat, 2) / (2. * (sigma * sigma)))
+    return -np.power(sep_mat, 2) / (2. * (sigma * sigma))
 
 
 def draw_vert_rainbow_line(ax, t, n_beads, cmap=\'jet\', lw=10):
@@ -405,7 +406,7 @@ def draw_vert_rainbow_line(ax, t, n_beads, cmap=\'jet\', lw=10):
 
 
 def plot_contact_kymo(fig, ax, time_arr, contact_kymo,
-                      contact_type="", vmax=10, label_flag=True):
+                      contact_type="", vmax=20, label_flag=True):
     y = np.arange(contact_kymo.shape[0] + 1)
     # Add extra time point
     x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
@@ -446,6 +447,7 @@ def setup_data(view):
 
 
 def render(view, width, height):
+    print("Hello")
     fig = python_view.matplotlib_figure(width, height)
     axarr = []
     axarr += [fig.add_subplot(1, 2, 1)]
@@ -455,7 +457,6 @@ def render(view, width, height):
     axarr[0].set_aspect(\'equal\')
     axarr[0].set_xlabel(r"Bead index")
     axarr[0].set_ylabel(r"Bead index")
-    axarr[0].set_title("{}")
 
     data_object = view.GetVisibleDataObjectForRendering(0)
     x = data_object.GetPoints().GetData()  # Get positions of points
@@ -466,13 +467,14 @@ def render(view, width, height):
         com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=2)
     contact_map = gauss_weighted_contact(sep_mat, sigma=.010)
 
-    c = axarr[0].pcolorfast(contact_map, cmap=\'YlOrRd\')
+    c = axarr[0].pcolorfast(contact_map, cmap=\'YlOrRd\', vmin=-10, vmax=0)
     fig.colorbar(c, ax=axarr[0],
                  # label=r"$\\log$(Inferred contact map) $\\sim$
                  # ($r_{{ij}}^2/2\\sigma^2$)")
-                 label=r"Log contact probability $\\sim$ ($-r_{{ij}}^2$)")
+                 label=r"Log contact probability $\\sim$ ($-r_{{ij}}^2$)",
+                 )
 
-    contact_path = "{}"
+    contact_path = Path("{}")
     assert contact_path.exists(), "Contact analysis file does not exist"
     with h5py.File(contact_path, \'r\') as h5d:
         CONTACT_KYMO = h5d[\'contact_kymo\'][...]
@@ -489,7 +491,7 @@ def render(view, width, height):
     draw_vert_rainbow_line(
         axarr[1], TIME_ARR[current_frame_index], CONTACT_KYMO.shape[0])
     return python_view.figure_to_image(fig)
-""".format("Contact map", Path.cwd() / 'analysis/contact_analysis.h5')
+""".format(Path.cwd() / 'analysis/contact_analysis.h5')
 
 # ================================================================
 # addendum: following script captures some of the application
@@ -506,10 +508,9 @@ layout1.SetSize(4486, 2187)
 # saving camera placements for views
 
 # current camera placement for renderView1
-renderView1.CameraPosition = [0.24874988563699163,
-                              0.00019760412025856405, 1.1148423714909423]
+renderView1.CameraPosition = [0.0, 0.0, 2.]
 renderView1.CameraFocalPoint = [
-    0.24874988563699163, 0.00019760412025856405, 4.898482660470327e-08]
+    0.0, 0.0, 4.898482660470327e-08]
 renderView1.CameraParallelScale = 0.28854242535090935
 
 # --------------------------------------------
@@ -526,4 +527,4 @@ animationScene1.AnimationTime = 0.0
 layout1.PreviewMode = [3840, 2160]
 layout1.SetSize(3840, 2159)
 SaveAnimation(
-    str(Path.cwd() / 'analysis/pv_flexible_filament_state.avi', layout1, FrameRate=1, FrameWindow=[0, 5]))
+    str(Path.cwd() / 'analysis/pv_flexible_filament_state.avi'), layout1, FrameRate=30, FrameWindow=[1, 1200])
