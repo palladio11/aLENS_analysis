@@ -2,6 +2,7 @@
 # import paraview
 # paraview.compatibility.major = 5
 # paraview.compatibility.minor = 11
+from math import *
 
 # import the simple module from the paraview
 from paraview.simple import *
@@ -9,9 +10,13 @@ from pathlib import Path
 # disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
+# work_dir = Path.home() / 'Desktop/Ke100_Pin3.0um'
+work_dir = Path.cwd()
+assert work_dir.exists()
+
 # create a new 'PVD Reader'
 sylinderpvtppvd = PVDReader(registrationName='Sylinderpvtp.pvd',
-                            FileName=str(Path.cwd() / 'result/Sylinderpvtp.pvd'))
+                            FileName=str(work_dir / 'result/Sylinderpvtp.pvd'))
 sylinderpvtppvd.CellArrays = ['gid', 'group', 'isImmovable', 'radius', 'radiusCollision', 'length', 'lengthCollision', 'vel', 'omega', 'velCollision', 'omegaCollision', 'velBilateral', 'omegaBilateral',
                               'velNonBrown', 'omegaNonBrown', 'force', 'torque', 'forceCollision', 'torqueCollision', 'forceBilateral', 'torqueBilateral', 'forceNonBrown', 'torqueNonBrown', 'velBrown', 'omegaBrown', 'xnorm', 'znorm']
 sylinderpvtppvd.PointArrays = ['endLabel']
@@ -37,17 +42,17 @@ animationScene1.UpdateAnimationUsingDataTimeSteps()
 
 # create a new 'Legacy VTK Reader'
 simBoxvtk = LegacyVTKReader(registrationName='simBox.vtk', FileNames=[
-                            str(Path.cwd() / 'result/simBox.vtk')])
+                            str(work_dir / 'result/simBox.vtk')])
 
 # create a new 'PVD Reader'
 proteinpvtppvd = PVDReader(registrationName='Proteinpvtp.pvd',
-                           FileName=str(Path.cwd() / 'result/Proteinpvtp.pvd'))
+                           FileName=str(work_dir / 'result/Proteinpvtp.pvd'))
 proteinpvtppvd.CellArrays = ['gid', 'tag']
 proteinpvtppvd.PointArrays = ['idBind']
 
 # create a new 'PVD Reader'
 conBlockpvtppvd = PVDReader(registrationName='ConBlockpvtp.pvd',
-                            FileName=str(Path.cwd() / 'result/ConBlockpvtp.pvd'))
+                            FileName=str(work_dir / 'result/ConBlockpvtp.pvd'))
 conBlockpvtppvd.CellArrays = [
     'oneSide', 'bilateral', 'delta0', 'gamma', 'kappa', 'Stress']
 conBlockpvtppvd.PointArrays = ['gid', 'globalIndex', 'posIJ', 'normIJ']
@@ -306,6 +311,20 @@ glyph1Display.SetScalarBarVisibility(renderView1, False)
 # rename source object
 RenameSource('GID', glyph1)
 
+gID = FindSource('GID')
+
+# create a new 'Annotate Time Filter'
+annotateTimeFilter1 = AnnotateTimeFilter(
+    registrationName='AnnotateTimeFilter1', Input=gID)
+annotateTimeFilter1Display = Show(
+    annotateTimeFilter1, renderView1, 'TextSourceRepresentation')
+annotateTimeFilter1.Scale = 0.5  # TODO make this something found from the data
+# TODO make this hr:min:sec filter
+annotateTimeFilter1.Format = 'Time: {time:.1f}'
+annotateTimeFilter1Display.FontSize = 64
+annotateTimeFilter1Display.WindowLocation = 'Upper Center'
+
+
 # hide data in view
 Hide(proteinpvtppvd, renderView1)
 
@@ -379,7 +398,7 @@ pythonView1.Update()
 
 # Properties modified on pythonView1
 pythonView1.Script = """from paraview import python_view
-from paraview.simple import GetActiveView, GetAnimationScene, ExtractTimeSteps
+from paraview.simple import GetActiveView, GetAnimationScene, ExtractTimeSteps, GetTimeKeeper
 from pathlib import Path
 from paraview.numpy_support import vtk_to_numpy
 import matplotlib.pyplot as plt
@@ -406,7 +425,7 @@ def draw_vert_rainbow_line(ax, t, n_beads, cmap=\'jet\', lw=10):
 
 
 def plot_contact_kymo(fig, ax, time_arr, contact_kymo,
-                      contact_type="", vmax=20, label_flag=True):
+                      contact_type="", vmax=25, label_flag=True):
     y = np.arange(contact_kymo.shape[0] + 1)
     # Add extra time point
     x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
@@ -447,7 +466,6 @@ def setup_data(view):
 
 
 def render(view, width, height):
-    print("Hello")
     fig = python_view.matplotlib_figure(width, height)
     axarr = []
     axarr += [fig.add_subplot(1, 2, 1)]
@@ -467,7 +485,7 @@ def render(view, width, height):
         com_arr[:, np.newaxis, :] - com_arr[np.newaxis, :, :], axis=2)
     contact_map = gauss_weighted_contact(sep_mat, sigma=.010)
 
-    c = axarr[0].pcolorfast(contact_map, cmap=\'YlOrRd\', vmin=-10, vmax=0)
+    c = axarr[0].pcolorfast(contact_map, cmap=\'YlOrRd\', vmin=-25, vmax=0)
     fig.colorbar(c, ax=axarr[0],
                  # label=r"$\\log$(Inferred contact map) $\\sim$
                  # ($r_{{ij}}^2/2\\sigma^2$)")
@@ -482,6 +500,7 @@ def render(view, width, height):
 
     # Get the current frame index
     current_frame_index = int(GetActiveView().ViewTime)
+    print("Current timestep: ", current_frame_index)
     # c = axarr[1].pcolor(sep_mat, cmap=\'YlOrRd\')
     # axarr[1].set_title("Time {{:.2f}} sec".format(current_frame_index))
     plot_contact_kymo(fig, axarr[1], TIME_ARR, CONTACT_KYMO)
@@ -491,7 +510,7 @@ def render(view, width, height):
     draw_vert_rainbow_line(
         axarr[1], TIME_ARR[current_frame_index], CONTACT_KYMO.shape[0])
     return python_view.figure_to_image(fig)
-""".format(Path.cwd() / 'analysis/contact_analysis.h5')
+""".format(work_dir / 'analysis/contact_analysis.h5')
 
 # ================================================================
 # addendum: following script captures some of the application
@@ -513,6 +532,11 @@ renderView1.CameraFocalPoint = [
     0.0, 0.0, 4.898482660470327e-08]
 renderView1.CameraParallelScale = 0.28854242535090935
 
+# run the pipeline here to get the bounds
+# rep = Show(bovr)
+# rep.Representation = 'Outline'
+# Render()
+
 # --------------------------------------------
 # uncomment the following to render all views
 # RenderAllViews()
@@ -527,4 +551,4 @@ animationScene1.AnimationTime = 0.0
 layout1.PreviewMode = [3840, 2160]
 layout1.SetSize(3840, 2159)
 SaveAnimation(
-    str(Path.cwd() / 'analysis/pv_flexible_filament_state.avi'), layout1, FrameRate=30, FrameWindow=[1, 1200])
+    str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1, FrameRate=30, FrameWindow=[1, 1200])
