@@ -11,7 +11,7 @@ paraview.simple._DisableFirstRenderCameraReset()
 
 # create a new 'PVD Reader'
 sylinderpvtppvd = PVDReader(registrationName='Sylinderpvtp.pvd',
-                            FileName='/Users/alamson/projects/DATA/my_alens_data/NewStickyFlexibleFilament/result/Sylinderpvtp.pvd')
+                            FileName=str(Path.cwd() / 'result/Sylinderpvtp.pvd'))
 sylinderpvtppvd.CellArrays = ['gid', 'group', 'isImmovable', 'radius', 'radiusCollision', 'length', 'lengthCollision', 'vel', 'omega', 'velCollision', 'omegaCollision', 'velBilateral', 'omegaBilateral',
                               'velNonBrown', 'omegaNonBrown', 'force', 'torque', 'forceCollision', 'torqueCollision', 'forceBilateral', 'torqueBilateral', 'forceNonBrown', 'torqueNonBrown', 'velBrown', 'omegaBrown', 'xnorm', 'znorm']
 sylinderpvtppvd.PointArrays = ['endLabel']
@@ -37,17 +37,17 @@ animationScene1.UpdateAnimationUsingDataTimeSteps()
 
 # create a new 'Legacy VTK Reader'
 simBoxvtk = LegacyVTKReader(registrationName='simBox.vtk', FileNames=[
-                            '/Users/alamson/projects/DATA/my_alens_data/NewStickyFlexibleFilament/result/simBox.vtk'])
+                            str(Path.cwd() / 'result/simBox.vtk')])
 
 # create a new 'PVD Reader'
 proteinpvtppvd = PVDReader(registrationName='Proteinpvtp.pvd',
-                           FileName='/Users/alamson/projects/DATA/my_alens_data/NewStickyFlexibleFilament/result/Proteinpvtp.pvd')
+                           FileName=str(Path.cwd() / 'result/Proteinpvtp.pvd'))
 proteinpvtppvd.CellArrays = ['gid', 'tag']
 proteinpvtppvd.PointArrays = ['idBind']
 
 # create a new 'PVD Reader'
 conBlockpvtppvd = PVDReader(registrationName='ConBlockpvtp.pvd',
-                            FileName='/Users/alamson/projects/DATA/my_alens_data/NewStickyFlexibleFilament/result/ConBlockpvtp.pvd')
+                            FileName=str(Path.cwd() / 'result/ConBlockpvtp.pvd'))
 conBlockpvtppvd.CellArrays = [
     'oneSide', 'bilateral', 'delta0', 'gamma', 'kappa', 'Stress']
 conBlockpvtppvd.PointArrays = ['gid', 'globalIndex', 'posIJ', 'normIJ']
@@ -472,8 +472,7 @@ def render(view, width, height):
                  # ($r_{{ij}}^2/2\\sigma^2$)")
                  label=r"Log contact probability $\\sim$ ($-r_{{ij}}^2$)")
 
-    contact_path = Path.home() / \\
-        \'projects/DATA/my_alens_data/NewStickyFlexibleFilament/analysis/contact_analysis.h5\'
+    contact_path = "{}"
     assert contact_path.exists(), "Contact analysis file does not exist"
     with h5py.File(contact_path, \'r\') as h5d:
         CONTACT_KYMO = h5d[\'contact_kymo\'][...]
@@ -490,7 +489,7 @@ def render(view, width, height):
     draw_vert_rainbow_line(
         axarr[1], TIME_ARR[current_frame_index], CONTACT_KYMO.shape[0])
     return python_view.figure_to_image(fig)
-""".format(Path.cwd())
+""".format("Contact map", Path.cwd() / 'analysis/contact_analysis.h5')
 
 # ================================================================
 # addendum: following script captures some of the application
@@ -527,4 +526,4 @@ animationScene1.AnimationTime = 0.0
 layout1.PreviewMode = [3840, 2160]
 layout1.SetSize(3840, 2159)
 SaveAnimation(
-    '/Users/alamson/projects/DATA/my_alens_data/NewStickyFlexibleFilament/analysis/pv_flexible_filament_state.avi', layout1, FrameRate=1, FrameWindow=[0, 5])
+    str(Path.cwd() / 'analysis/pv_flexible_filament_state.avi', layout1, FrameRate=1, FrameWindow=[0, 5]))
