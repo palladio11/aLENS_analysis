@@ -551,4 +551,6 @@ animationScene1.AnimationTime = 0.0
 layout1.PreviewMode = [3840, 2160]
 layout1.SetSize(3840, 2159)
 SaveAnimation(
-    str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1, FrameRate=30, FrameWindow=[1, 1200])
+    str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1, FrameRate=30, FrameWindow=[1, 30])
+# str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1,
+# FrameRate=30, FrameWindow=[1, 1200])
