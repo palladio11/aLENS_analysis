@@ -36,5 +36,25 @@ def calc_nematic_order(syls):
     # nematic_order = np.max(ufunc_eigvals(nematic_tensor, axis=(0,1)), axis=0)
 
     return np.array(nematic_order)
-    
+
+def nematic_analysis(direct_arr):
+    """Takes in a list of orientations and calculates the nematic order parameter and director
+
+    Parameters
+    ----------
+    directors : _type_
+        _description_
+    """
+    n = direct_arr.shape[0]
+    lengths = np.linalg.norm(direct_arr, axis=1)
+    unit_dirs = direct_arr / lengths[:, None, :]
+    nematic_tensor = (np.einsum('ij,il->jl', unit_dirs, unit_dirs) 
+                      - np.eye(3)[:,:,None]/3.)/n
+
+    eigvals, eigvecs = np.linalg.eig(nematic_tensor)
+    sort_inds = np.argsort(eigvals)
+    nem_order = eigvals[sort_inds[-1]]
+    nem_director = eigvecs[:, sort_inds[-1]]
+    return nem_order, nem_director
+
 
