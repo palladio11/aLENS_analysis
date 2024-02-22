@@ -26,6 +26,58 @@ def get_file_number(f):
     return int(re.findall(r'\d+', f.name)[-1])
 
 
+def get_ascii_files(run_dir):
+    """Return the location of the final directory
+
+    @param run_dir Run directory with a result directory in it
+    @return: String of file that was read
+
+    """
+    if (run_dir / 'result').exists():
+        result_dir = run_dir / 'result'
+        is_zip = False
+    elif (run_dir / 'result.zip').exists():
+        result_zip = zipfile.ZipFile(run_dir / 'result.zip')
+        result_path = zipfile.Path(run_dir / 'result.zip')
+        is_zip = True
+    else:
+        raise FileNotFoundError(
+            f'Could not find result directory or zipfile in {run_dir}.')
+
+    if is_zip:
+        sy_reg = re.compile(r'.*SylinderAscii.*.dat')
+        syl_ascii_files = [
+            result_path /
+            syl_path for syl_path in list(
+                filter(sy_reg.search, result_zip.namelist()))]
+
+        prot_reg = re.compile(r'.*ProteinAscii.*.dat')
+        prot_ascii_files = [
+            result_path /
+            prot_path for prot_path in list(
+                filter(
+                    sy_reg.search,
+                    result_zip.namelist()))]
+
+    else:
+        result_dirs = [d for d in result_dir.iterdir() if d.is_dir()
+                       and d.name != 'PNG']
+        syl_ascii_files = []
+        prot_ascii_files = []
+        for rdir in result_dirs:
+            syl_ascii_files += list(rdir.glob('SylinderAscii_*.dat'))
+            prot_ascii_files += list(rdir.glob('ProteinAscii_*.dat'))
+
+    syl_ascii_files.sort(key=get_file_number)
+    prot_ascii_files.sort(key=get_file_number)
+
+    if len(syl_ascii_files) != len(prot_ascii_files):
+        raise AssertionError(
+            'Number of snapshots does not line up.')
+    # Read file to a string and return
+    return syl_ascii_files, prot_ascii_files
+
+
 def get_last_ascii_files(run_dir):
     """Return the location of the final directory
 
