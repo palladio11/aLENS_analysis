@@ -3,16 +3,30 @@
 # paraview.compatibility.major = 5
 # paraview.compatibility.minor = 11
 from math import *
+import h5py
 
 # import the simple module from the paraview
 from paraview.simple import *
 from pathlib import Path
+
 # disable automatic camera reset on 'Show'
 paraview.simple._DisableFirstRenderCameraReset()
 
-# work_dir = Path.home() / 'Desktop/Ke100_Pin3.0um'
+
 work_dir = Path.cwd()
+# work_dir = Path.home() / 'Desktop/Ke100_Pin3.0um'
+# work_dir = Path('/Users/mnt/ceph/users/alamson/DATA/Chromatin/DynCondPaper/24-01-22_aLc1_line1600_Pin5um_Ke30_ks100_2patch')
+
 assert work_dir.exists()
+# assert analysis_dir.exists()
+
+# with h5py.File(analysis_dir / 'raw_data.h5', 'r')  as h5d, (analysis_dir / 'test.txt').open('w') as file1:
+#     # Examine the RunConfig file
+#     # print( "###### RunConfig file string ########")
+#     run_config_str = h5d.attrs['RunConfig']
+#     # print(run_config_str, "\n")
+#     file1.write(run_config_str)
+
 
 # create a new 'PVD Reader'
 sylinderpvtppvd = PVDReader(registrationName='Sylinderpvtp.pvd',
@@ -36,6 +50,8 @@ materialLibrary1 = GetMaterialLibrary()
 # get display properties
 sylinderpvtppvdDisplay = GetDisplayProperties(
     sylinderpvtppvd, view=renderView1)
+
+# renderView1.ResetCamera(True)
 
 # update animation scene based on data timesteps
 animationScene1.UpdateAnimationUsingDataTimeSteps()
@@ -262,18 +278,6 @@ glyph1.ScaleFactor = 2.0
 # update the view to ensure updated data information
 renderView1.Update()
 
-# update the view to ensure updated data information
-renderView1.Update()
-
-# update the view to ensure updated data information
-renderView1.Update()
-
-# update the view to ensure updated data information
-renderView1.Update()
-
-# update the view to ensure updated data information
-renderView1.Update()
-
 # set scalar coloring
 ColorBy(glyph1Display, ('POINTS', 'gid'))
 
@@ -304,6 +308,7 @@ gidPWF.ScalarRangeInitialized = 1
 # Apply a preset using its name. Note this may not work as expected when
 # presets have duplicate names.
 gidLUT.ApplyPreset('Rainbow Uniform', True)
+gidLUT.InvertTransferFunction()
 
 # hide color bar/color legend
 glyph1Display.SetScalarBarVisibility(renderView1, False)
@@ -411,7 +416,7 @@ def gauss_weighted_contact(sep_mat, sigma=.010):
     return -np.power(sep_mat, 2) / (2. * (sigma * sigma))
 
 
-def draw_vert_rainbow_line(ax, t, n_beads, cmap=\'jet\', lw=10):
+def draw_vert_rainbow_line(ax, t, n_beads, cmap=\'jet_r\', lw=10):
     c_arr = np.linspace(0, 1, n_beads)
     t_arr = np.ones(n_beads)*t
 
@@ -443,18 +448,20 @@ def plot_contact_kymo(fig, ax, time_arr, contact_kymo,
         _ = ax.set_title("Contact probabilty \'kymograph\'")
         ax.set_xlabel("Time $t$ (sec)")
         ax.set_ylabel("Bead index")
+    
+    ax.invert_yaxis()
     return
 
 
 def setup_data(view):
     alens_stl = {{
-        "axes.titlesize": 30,
-        "axes.labelsize": 32,
+        "axes.titlesize": 48,
+        "axes.labelsize": 48,
         "lines.linewidth": 3,
         "lines.markersize": 10,
-        "xtick.labelsize": 32,
-        "ytick.labelsize": 32,
-        "font.size": 32,
+        "xtick.labelsize": 48,
+        "ytick.labelsize": 48,
+        "font.size": 48,
         "font.sans-serif": \'helvetica\',
         "text.usetex": False,
         \'mathtext.fontset\': \'cm\',
@@ -486,6 +493,7 @@ def render(view, width, height):
     contact_map = gauss_weighted_contact(sep_mat, sigma=.010)
 
     c = axarr[0].pcolorfast(contact_map, cmap=\'YlOrRd\', vmin=-25, vmax=0)
+    axarr[0].invert_yaxis()
     fig.colorbar(c, ax=axarr[0],
                  # label=r"$\\log$(Inferred contact map) $\\sim$
                  # ($r_{{ij}}^2/2\\sigma^2$)")
@@ -527,10 +535,10 @@ layout1.SetSize(4486, 2187)
 # saving camera placements for views
 
 # current camera placement for renderView1
-renderView1.CameraPosition = [0.0, 0.0, 2.]
-renderView1.CameraFocalPoint = [
-    0.0, 0.0, 4.898482660470327e-08]
-renderView1.CameraParallelScale = 0.28854242535090935
+# renderView1.CameraPosition = [0.0, 0.0, 2.]
+# renderView1.CameraFocalPoint = [
+#     0.0, 0.0, 4.898482660470327e-08]
+# renderView1.CameraParallelScale = 0.28854242535090935
 
 # run the pipeline here to get the bounds
 # rep = Show(bovr)
@@ -550,7 +558,10 @@ animationScene1.AnimationTime = 0.0
 # Enter preview mode
 layout1.PreviewMode = [3840, 2160]
 layout1.SetSize(3840, 2159)
+
+renderView1.ResetCamera(True)
+
 SaveAnimation(
-    str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1, FrameRate=30, FrameWindow=[1, 30])
-# str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1,
-# FrameRate=30, FrameWindow=[1, 1200])
+#     str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1, FrameRate=3, FrameWindow=[1, 3])
+str(work_dir / 'analysis/pv_flexible_filament_state.avi'), layout1,
+FrameRate=30, FrameWindow=[1, 1200])
