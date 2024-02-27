@@ -26,16 +26,11 @@ def calc_nematic_order(syls):
     n_syls = syls.shape[0]
 
     # nematic_tensor averaged over all sylinders
-    nematic_tensor = (np.einsum('ijk,ilk->jlk', unit_dirs, unit_dirs) 
-                      - np.eye(3)[:,:,None]/3.)/n_syls
+    nematic_tensor = (np.einsum('ijk,ilk->jlk', unit_dirs, unit_dirs)/n_syls - (np.eye(3)[:,:, np.newaxis]/3.))
         
-    nematic_order = []
-    for i in range(nematic_tensor.shape[2]):
-        nematic_order.append(np.max(np.linalg.eigvals(nematic_tensor[:,:,i])))
-
-    ## Possible vectorized version
-    # ufunc_eigvals = np.vectorize(np.linalg.eigvals, signature='(n)->()')
-    # nematic_order = np.max(ufunc_eigvals(nematic_tensor, axis=(0,1)), axis=0)
+    # Fastest way to calculate nematic order parameter
+    # You can prove that this is true by using the fact that the nematic order parameter is the largest eigenvalue of the nematic tensor and the tensor is Q_ab = S(<n_a n_b> - 1/3 delta_ab) where n_a is the director and S the order parameter
+    nematic_order = np.sqrt(1.5*np.einsum('ijk,ijk->k', nematic_tensor, nematic_tensor))
 
     return np.array(nematic_order)
 
