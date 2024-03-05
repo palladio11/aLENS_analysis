@@ -9,6 +9,7 @@ Description:
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import torch
 
 
 def calc_nematic_order(syls):
@@ -94,3 +95,23 @@ def make_structure_factor(Q_arr, r_arr, k):
     Snm = np.einsum('nij,mij->nm', fQ_arr, fQ_arr.conj()) 
     Snm -= np.diag((2./3.)*np.ones(Snm.shape[0]))
     return np.mean(Snm).real
+
+
+def make_structure_factor_torch(tQ_arr, tr_arr, tk_arr, device='cpu'):
+    """Make the structure factor from the fourier transform of the nematic tensor array
+
+    :fQ: Fourier transform of the nematic tensor array
+    :returns: Structure factor
+
+    """
+    # tQ_arr = torch.from_numpy(Q_arr).to(device)
+    # tk_arr = torch.from_numpy(k).to(device)
+    # tr_arr = torch.from_numpy(r_arr).to(device).double()
+
+    kr = torch.einsum('ni,i->n', tr_arr, tk_arr)
+    tfQ_arr = tQ_arr * (torch.cos(kr) + 1j * torch.sin(kr))[:, None, None]
+
+    # Find structure factor
+    Snm = torch.einsum('nij,mij->nm', tfQ_arr, tfQ_arr.conj()) 
+    Snm -= (2./3.)*torch.eye(Snm.shape[0]).to(device)
+    return torch.mean(Snm).real
