@@ -6,7 +6,6 @@ __author__ = """Adam Reay Lamson"""
 __email__ = 'alamson@flatironinstitute.org'
 __version__ = '0.1.0'
 
-
 from .physical_scales import (get_drag_coeff,
                               get_char_time,
                               get_poly_diffuse_dist,
@@ -25,11 +24,13 @@ from .rouse_mode_analysis import (get_rouse_modes_at_t,
                                   get_rouse_mode_corr,
                                   get_rouse_mode_corr_fast,)
 
+
 from . import chromatin
 from .scripts import Util
 from . import hydro
 from . import helpers
 from . import nematic_order
+from . import motor_densities
 #######################################################################
 #                        Soon to be depricated                        #
 #######################################################################
