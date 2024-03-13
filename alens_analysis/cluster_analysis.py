@@ -94,6 +94,7 @@ class Cluster:
         # Progenitors must be set with find_descendent function
         cur = self
         main_progs = [cur]
+        # Loop over progenitors until you find the first cluster of the branch
         while cur.progenitors:
             cur = cur.progenitors[0]
             main_progs += [cur]
@@ -134,7 +135,7 @@ class ClusterTree(object):
     def __init__(self, id=0):
         self.tree_id = id
         self.clusters = []  # List of Cluster objects in tree
-        self.main_clust_branch = []  # Is this just a list of part ids?
+        self.main_clust_branch = []  # List of Cluster objects in main branch
 
         # Root clusters of branches that merged into the main branch
         self.branch_roots = []  # List of clusters where start
@@ -173,7 +174,7 @@ class ClusterTree(object):
         return self.branch_roots
 
     def update_branch_roots(self) -> None:
-        self.branch_roots = [self.clusters[0]]
+        self.branch_roots = [self.clusters[0]]  # Include the main branch
         for clust in self.clusters:
             # Skip the first branch for that is the main branch
             for progs in clust.progenitors[1:]:
