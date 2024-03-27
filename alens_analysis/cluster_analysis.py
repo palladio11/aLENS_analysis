@@ -106,7 +106,7 @@ class Cluster:
         Returns
         -------
         list
-            Cluster objects that were 'progentors' of cluster
+            Cluster objects that were 'progenitors' of cluster
         """
         progs = []
         for prog in self.progenitors:
