@@ -11,6 +11,7 @@ import warnings
 import numpy as np
 from scipy.special import erf
 from scipy.integrate import quad
+from scipy.optimize import root_scalar
 import scipy.stats as stats
 from scipy.signal import savgol_filter
 from scipy.spatial import ConvexHull
@@ -220,3 +221,76 @@ def kymo_and_cluster_graph(
         _ = ax.set_ylim(0, 1600)
         _ = ax.set_xlim(0, time_arr[-1])
         _ = ax.set_xlabel("Time")
+
+
+def free_energy_continuous_deriv_two_blobs(
+    ld, L, Lc=1.0, nu=1.0, alpha=1.0, gamma=1.0, kappa=1.0
+):
+    """
+    Free energy of system when you have two identical condensates with ld length of chain in each
+
+    Parameters
+    ----------
+    ld : float
+        amount of chain in a single blob
+    L : float
+        Separation of filament ends
+    Lc : float, optional
+        _description_, by default 1.0
+    nu : float, optional
+        _description_, by default 1.0
+    alpha : float, optional
+        _description_, by default 1.0
+    gamma : float, optional
+        _description_, by default 1.0
+    kappa : float, optional
+        _description_, by default 1.0
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    return (1.0 / 6.0) * (
+        -12 * alpha * nu
+        + (3 * kappa * L**2)
+        * (2 * L**2 - 4 * L * (Lc - 2 * ld) + 3 * (Lc - 2 * ld) ** 2)
+        / ((Lc - 2 * ld) ** 2 * (L - Lc + 2 * ld) ** 2)
+        + (8 * np.power(6, 2.0 / 3.0) * alpha * gamma * np.cbrt(np.pi / alpha * ld))
+    )
+
+
+def calc_max_beads_in_two_condensates(
+    L=1.0, Lc=1.0, nu=1.0, alpha=1.0, gamma=1.0, kappa=1.0, **kwargs
+):
+    epsilon = 0.000001
+    ld_lower_bound = epsilon  # Can't be zero,
+    ld_upper_bound = (
+        (Lc - (L + epsilon)) * 0.5
+    )  # Half because there are two condensates contributing to total length in droplet
+    while (
+        free_energy_continuous_deriv_two_blobs(
+            ld_lower_bound, L, Lc, nu, alpha, gamma, kappa
+        )
+        > 0
+    ):
+        ld_lower_bound += 0.1
+
+    if (
+        ld_lower_bound > ld_upper_bound
+        or free_energy_continuous_deriv_two_blobs(
+            ld_upper_bound, L, Lc, nu, alpha, gamma, kappa
+        )
+        < 0
+    ):
+        # No max was found, condensates would not exist
+        print("No max found with end separation", L)
+        return 0
+
+    result = root_scalar(
+        free_energy_continuous_deriv_two_blobs,
+        method="brentq",
+        args=(L, Lc, nu, alpha, gamma, kappa),
+        bracket=[ld_lower_bound, ld_upper_bound],
+    )
+    return result.root
