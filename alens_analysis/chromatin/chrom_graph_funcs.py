@@ -737,8 +737,9 @@ def plot_contact_kymo(
             _ = fig.colorbar(c, ax=ax, label=r"Contact Number")
     if label_flag:
         # _ = ax.set_title("Contact probabilty 'kymograph'")
-        ax.set_xlabel("Time [sec]")
+        ax.set_xlabel("Time [s]")
         ax.set_ylabel("Bead index")
+    ax.invert_yaxis()
     return
 
 
