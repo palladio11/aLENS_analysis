@@ -79,6 +79,24 @@ plt.rcParams["image.cmap"] = "YlOrRd"
 # plt.rcParams['image.cmap'] = 'RdYlBu_r'
 
 
+def plot_confidence_int(
+    ax, time_arr, mean, std_dev, num_runs=12, color="b", ci=0.95, label="Mean"
+):
+    degrees_freedom = num_runs - 1
+    confidence_interval = (
+        stats.t.ppf((1 + ci) / 2.0, degrees_freedom) * std_dev / np.sqrt(num_runs)
+    )
+
+    _ = ax.plot(time_arr, mean, label=label, color=color)
+    _ = ax.fill_between(
+        time_arr,
+        mean - confidence_interval,
+        mean + confidence_interval,
+        color=color,
+        alpha=0.1,
+    )
+
+
 def cluster_analysis_graph(sim_path, part_min=40):
     flat_time_arr = []
     flat_clust_cent_arr = []
