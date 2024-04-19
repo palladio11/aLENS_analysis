@@ -241,7 +241,76 @@ def kymo_and_cluster_graph(
         _ = ax.set_xlabel("Time")
 
 
-def free_energy_continuous_deriv_two_blobs(
+def calc_droplet_only_fe(ld, alpha, gamma, nu):
+    return -(nu * alpha * ld) + (4.0 * np.pi * gamma) * np.power(
+        (3.0 * alpha * ld) / (4.0 * np.pi), 2.0 / 3.0
+    )
+
+
+def calc_polymer_only_fe(ld, L, Lc, kappa):
+    Lp = Lc - ld
+    return 0.25 * kappa * ((Lp**2) / (Lp - L) + L**2 / Lp - (Lp + L))
+
+
+def calc_polymer_only_fe_deriv(ld, L, Lc, kappa):
+    Lp = Lc - ld
+    return (
+        (0.25 * kappa * L**2)
+        * ((L**2) - (2.0 * Lp * L) + 2.0 * (Lp**2))
+        / ((Lp**2) * ((L - Lp) ** 2))
+    )
+
+
+def calc_droplet_only_fe_deriv(ld, alpha, gamma, nu):
+    return (
+        2.0 * gamma * np.power(4.0 * np.pi * alpha * alpha / (3 * ld), 1.0 / 3.0)
+    ) - (nu * alpha)
+
+
+# Derivative of free energy of the system taken with respect to l1
+def two_cond_free_energy_deriv(
+    l1: float,
+    l2: float,
+    L: float,
+    Lc: float,
+    alpha: float,
+    gamma: float,
+    nu: float,
+    kappa: float,
+) -> float:
+    """_summary_
+
+    Parameters
+    ----------
+    l1 : float
+        _description_
+    l2 : float
+        _description_
+    L : float
+        _description_
+    Lc : float
+        _description_
+    alpha : float
+        _description_
+    gamma : float
+        _description_
+    nu : float
+        _description_
+    kappa : float
+        _description_
+
+    Returns
+    -------
+    float
+        _description_
+    """
+
+    fe_deriv_droplet = calc_droplet_only_fe_deriv(l1, alpha, gamma, nu)
+    fe_deriv_polymer = calc_polymer_only_fe_deriv(l1 + l2, L, Lc, kappa)
+    return fe_deriv_droplet + fe_deriv_polymer
+
+
+def free_energy_two_identical_conds_continuous_deriv(
     ld, L, Lc=1.0, nu=1.0, alpha=1.0, gamma=1.0, kappa=1.0
 ):
     """
@@ -269,17 +338,27 @@ def free_energy_continuous_deriv_two_blobs(
     _type_
         _description_
     """
+
     return (1.0 / 6.0) * (
-        -12 * alpha * nu
-        + (3 * kappa * L**2)
-        * (2 * L**2 - 4 * L * (Lc - 2 * ld) + 3 * (Lc - 2 * ld) ** 2)
+        # Bulk term
+        -12.0 * alpha * nu
+        # Polymer term
+        + (3.0 * kappa * (L**2))
+        * (L**2 - 2 * L * (Lc - 2 * ld) + 2 * ((Lc - 2 * ld) ** 2))
         / ((Lc - 2 * ld) ** 2 * (L - Lc + 2 * ld) ** 2)
-        + (8 * np.power(6, 2.0 / 3.0) * alpha * gamma * np.cbrt(np.pi / alpha * ld))
+        # Surface tension term
+        + (8 * np.power(6, 2.0 / 3.0) * alpha * gamma * np.cbrt(np.pi / (alpha * ld)))
     )
 
 
-def calc_max_beads_in_two_condensates(
-    L=1.0, Lc=1.0, nu=1.0, alpha=1.0, gamma=1.0, kappa=1.0, **kwargs
+def calc_max_length_in_two_condensates(
+    L: float = 1.0,
+    Lc: float = 1.0,
+    nu: float = 1.0,
+    alpha: float = 1.0,
+    gamma: float = 1.0,
+    kappa: float = 1.0,
+    **kwargs,
 ):
     epsilon = 0.000001
     ld_lower_bound = epsilon  # Can't be zero,
@@ -287,16 +366,16 @@ def calc_max_beads_in_two_condensates(
         (Lc - (L + epsilon)) * 0.5
     )  # Half because there are two condensates contributing to total length in droplet
     while (
-        free_energy_continuous_deriv_two_blobs(
+        free_energy_two_identical_conds_continuous_deriv(
             ld_lower_bound, L, Lc, nu, alpha, gamma, kappa
         )
         > 0
     ):
-        ld_lower_bound += 0.1
+        ld_lower_bound += 0.05
 
     if (
         ld_lower_bound > ld_upper_bound
-        or free_energy_continuous_deriv_two_blobs(
+        or free_energy_two_identical_conds_continuous_deriv(
             ld_upper_bound, L, Lc, nu, alpha, gamma, kappa
         )
         < 0
@@ -306,9 +385,19 @@ def calc_max_beads_in_two_condensates(
         return 0
 
     result = root_scalar(
-        free_energy_continuous_deriv_two_blobs,
+        free_energy_two_identical_conds_continuous_deriv,
         method="brentq",
         args=(L, Lc, nu, alpha, gamma, kappa),
         bracket=[ld_lower_bound, ld_upper_bound],
     )
     return result.root
+
+
+def two_cond_size_continuous_deriv(t, state, nu, gamma, alpha, kappa, L, Lc, b, beta):
+    l1, l2 = state
+
+    dAdl1 = two_cond_free_energy_deriv(l1, l2, L, Lc, alpha, gamma, nu, kappa)
+    dAdl2 = two_cond_free_energy_deriv(l2, l1, L, Lc, alpha, gamma, nu, kappa)
+    dl1 = 2.0 * b * (np.exp(-beta * b * dAdl1) - 1.0)
+    dl2 = 2.0 * b * (np.exp(-beta * b * dAdl2) - 1.0)
+    return [dl1, dl2]
