@@ -163,6 +163,25 @@ def cluster_analysis_graph(sim_path, part_min=40):
     fig.tight_layout()
 
 
+def kymo_contact_graph(fig, ax, sim_path):
+    h5_contact_file = sim_path / "analysis/contact_analysis.h5"
+
+    with h5py.File(h5_contact_file, "r") as h5_data:
+        time_arr = h5_data["time"][...]
+        contact_kymo = h5_data["contact_kymo"][...]
+
+    y = np.arange(contact_kymo.shape[0] + 1)
+    x = np.append(time_arr, [time_arr[-1] + time_arr[2] - time_arr[1]])
+    X, Y = np.meshgrid(x, y)
+    c = ax.pcolorfast(X, Y, contact_kymo, vmax=40)
+    _ = fig.colorbar(c, ax=ax, label=r"Contact number")
+    # _ = x.set_xlabel("Time $t$ [sec]")
+    # _ = x.set_ylabel("Bead index")
+    _ = ax.set_ylim(0, 1600)
+
+    _ = ax.invert_yaxis()
+
+
 def kymo_and_cluster_graph(
     sim_path,
     cluster_similarity_threshold=0.4,
@@ -401,3 +420,128 @@ def two_cond_size_continuous_deriv(t, state, nu, gamma, alpha, kappa, L, Lc, b, 
     dl1 = 2.0 * b * (np.exp(-beta * b * dAdl1) - 1.0)
     dl2 = 2.0 * b * (np.exp(-beta * b * dAdl2) - 1.0)
     return [dl1, dl2]
+
+
+def convert_e_to_x10n(text):
+    # Find numbers in scientific notation
+    matches = re.findall(r"\b\d+\.\d+e[+-]\d+\b", text)
+    for match in matches:
+        # Split the number into the coefficient and the exponent
+        coefficient, exponent = match.split("e")
+        # Convert the number to 'x10^n' format
+        x10n_format = rf"${coefficient}\times 10^{int(exponent)}$"
+        # Replace the original number with the 'x10^n' format
+        text = text.replace(match, x10n_format)
+    return text
+
+
+def tmerge_exact(x_sep, y_com, L, Lc, nu, gamma, alpha, kappa, b, beta, kmodes=100):
+    # Find max number of beads in two condensates
+    max_ld = calc_max_length_in_two_condensates(L, Lc, nu, alpha, gamma, kappa)
+
+    # Get max separation because condensates take up beads
+    max_sep = Lc - 2 * max_ld
+    assert x_sep < max_sep, "Separation too large for condensate size"
+    # Translate to center of mass
+    y_com += 0.5 * (max_sep - Lc)
+    assert y_com > 0 and y_com < max_sep, "Center of mass is no longer on the chain"
+
+    # Convert to bead number
+    max_bead_in_cond = int(max_ld / b)
+
+    n_beads = int(Lc / b)
+
+    # Find free energy of the two condensates
+    full_free_energy = calc_free_energy_two_blobs(
+        max_bead_in_cond, max_bead_in_cond, n_beads, L, alpha, gamma, nu, kappa, bd=b
+    )
+    free_energy_minus_bead = calc_free_energy_two_blobs(
+        max_bead_in_cond,
+        max_bead_in_cond - 1,
+        n_beads,
+        L,
+        alpha,
+        gamma,
+        nu,
+        kappa,
+        bd=b,
+    )
+    energy_diff = full_free_energy - free_energy_minus_bead
+
+    # Get diffusion constant (This seems to be off by a factor of 4)
+    D = 0.5 * b * b  # 2x a single condensate
+
+    # Rescale
+    x = x_sep / (2.0 * max_sep)
+    y = y_com / (max_sep)
+
+    # First term
+    T_o = ((max_sep**2) * x / D) * (1.0 - x)
+
+    # Second term
+    T_1 = 0
+    for i in range(kmodes):
+        k = 2 * i + 1
+        T_1 += (
+            (np.sin(k * np.pi * x) / (k**3))
+            * (np.sinh(k * y * np.pi) + np.sinh(k * (1 - y) * np.pi))
+            / np.sinh(k * np.pi)
+        )
+
+    return T_o - ((8.0 * (max_sep**2) / (D * (np.pi**3))) * T_1)
+
+
+FE_PREFACT = np.power(36.0 * np.pi, 1.0 / 3.0)
+
+
+def calc_free_energy_two_blobs(
+    l1_beads: int,
+    l2_beads: int,
+    n_beads: int,
+    L: float = 1.0,
+    alpha: float = 1.0,
+    gamma: float = 1.0,
+    nu: float = 1.0,
+    kappa: float = 1.0,
+    bd: float = 1.0,
+    **kwargs,
+) -> float:
+    """Calculate and return the total free energy for the current configuration
+
+    Parameters
+    ----------
+    n_beads : int
+        Contour length of polymer in bead number
+    l1_beads : int
+        Length of chain in blob 1  in bead number
+    l2_beads : int
+        Length of chain in blob 2  in bead number
+    L : float, optional
+        Filament end separation [Length], by default 1
+    alpha : float, optional
+        Condensate packing volume per length of chain [Length^2], by default 1
+    gamma : float, optional
+        Surface tension [Force/Length], by default 1
+    nu : float, optional
+        Free energy per volume of condensate [Force/Length^2], by default 1
+    kappa : float, optional
+        Filament flexibility [Force], by default 1
+    bd : float, optional
+        Diameter of a bead [Length], by default 1
+
+    Returns
+    -------
+    float
+        _description_
+    """
+
+    ltot_beads = l1_beads + l2_beads
+    Lp = (n_beads - ltot_beads) * bd
+
+    term1 = (FE_PREFACT * gamma) * (
+        np.power(l1_beads * bd * alpha, 2.0 / 3.0)
+        + np.power(l2_beads * bd * alpha, 2.0 / 3.0)
+    )
+    term2 = 0.25 * kappa * L * L * ((L - (2.0 * Lp)) / (Lp * (L - Lp)))
+    term3 = ltot_beads * alpha * nu * bd
+    return term1 + term2 - term3
