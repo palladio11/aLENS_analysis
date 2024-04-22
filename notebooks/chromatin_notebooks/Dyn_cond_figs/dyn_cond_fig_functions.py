@@ -469,7 +469,7 @@ def tmerge_exact(x_sep, y_com, L, Lc, nu, gamma, alpha, kappa, b, beta, kmodes=1
     energy_diff = full_free_energy - free_energy_minus_bead
 
     # Get diffusion constant (This seems to be off by a factor of 4)
-    D = 0.5 * b * b  # 2x a single condensate
+    D = 2 * b * b  # 2x a single condensate
 
     # Rescale
     x = x_sep / (2.0 * max_sep)
