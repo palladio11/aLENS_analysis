@@ -328,6 +328,17 @@ def two_cond_free_energy_deriv(
     fe_deriv_polymer = calc_polymer_only_fe_deriv(l1 + l2, L, Lc, kappa)
     return fe_deriv_droplet + fe_deriv_polymer
 
+def single_cond_free_energy_deriv(
+    ld: float,
+    L: float,
+    Lc: float,
+    alpha: float,
+    gamma: float,
+    nu: float,
+    kappa: float,
+) -> float:
+    return calc_polymer_only_fe_deriv(ld, L, Lc, kappa) + calc_droplet_only_fe_deriv(ld, alpha, gamma, nu)
+
 
 def free_energy_two_identical_conds_continuous_deriv(
     ld, L, Lc=1.0, nu=1.0, alpha=1.0, gamma=1.0, kappa=1.0
@@ -363,8 +374,8 @@ def free_energy_two_identical_conds_continuous_deriv(
         -12.0 * alpha * nu
         # Polymer term
         + (3.0 * kappa * (L**2))
-        * (L**2 - 2 * L * (Lc - 2 * ld) + 2 * ((Lc - 2 * ld) ** 2))
-        / ((Lc - 2 * ld) ** 2 * (L - Lc + 2 * ld) ** 2)
+        * ((L**2 - 2 * L * (Lc - 2 * ld) + 2 * ((Lc - 2 * ld) ** 2))
+        / ((Lc - 2. * ld) ** 2 * (L - Lc + 2 * ld) ** 2))
         # Surface tension term
         + (8 * np.power(6, 2.0 / 3.0) * alpha * gamma * np.cbrt(np.pi / (alpha * ld)))
     )
@@ -405,6 +416,46 @@ def calc_max_length_in_two_condensates(
 
     result = root_scalar(
         free_energy_two_identical_conds_continuous_deriv,
+        method="brentq",
+        args=(L, Lc, nu, alpha, gamma, kappa),
+        bracket=[ld_lower_bound, ld_upper_bound],
+    )
+    return result.root
+
+def calc_max_length_in_single_condensate(
+    L: float = 1.0,
+    Lc: float = 1.0,
+    nu: float = 1.0,
+    alpha: float = 1.0,
+    gamma: float = 1.0,
+    kappa: float = 1.0,
+    **kwargs,
+):
+    epsilon = 0.000001
+    ld_lower_bound = epsilon  # Can't be zero,
+    ld_upper_bound = Lc - (L + epsilon)
+      
+    while (
+        single_cond_free_energy_deriv(
+            ld_lower_bound, L, Lc, nu, alpha, gamma, kappa
+        )
+        > 0
+    ):
+        ld_lower_bound += 0.05
+
+    if (
+        ld_lower_bound > ld_upper_bound
+        or single_cond_free_energy_deriv(
+            ld_upper_bound, L, Lc, nu, alpha, gamma, kappa
+        )
+        < 0
+    ):
+        # No max was found, condensates would not exist
+        print("No max found with end separation", L)
+        return 0
+
+    result = root_scalar(
+        single_cond_free_energy_deriv,
         method="brentq",
         args=(L, Lc, nu, alpha, gamma, kappa),
         bracket=[ld_lower_bound, ld_upper_bound],
