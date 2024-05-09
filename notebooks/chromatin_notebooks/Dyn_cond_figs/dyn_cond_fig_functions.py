@@ -15,6 +15,7 @@ from scipy.optimize import root_scalar
 import scipy.stats as stats
 from scipy.signal import savgol_filter
 from scipy.spatial import ConvexHull
+import torch
 
 # Visualization
 import matplotlib as mpl
@@ -96,6 +97,15 @@ def plot_confidence_int(
         alpha=0.1,
     )
 
+def cluster_msd(com_arr, device='cpu'):
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    Ttot = com_arr.shape[-1]
+    msd = torch.zeros(com_arr.shape, device=device)
+    for i in range(1, Ttot):
+        diff = tcom_arr[i:] - tcom_arr[:-i]
+        msd[i] = torch.pow(diff,2).mean(dim=-1)
+
+    return msd.cpu().numpy()
 
 def cluster_analysis_graph(sim_path, part_min=40):
     flat_time_arr = []
@@ -502,25 +512,9 @@ def tmerge_exact(x_sep, y_com, L, Lc, nu, gamma, alpha, kappa, b, beta, kmodes=1
 
     n_beads = int(Lc / b)
 
-    # Find free energy of the two condensates
-    full_free_energy = calc_free_energy_two_blobs(
-        max_bead_in_cond, max_bead_in_cond, n_beads, L, alpha, gamma, nu, kappa, bd=b
-    )
-    free_energy_minus_bead = calc_free_energy_two_blobs(
-        max_bead_in_cond,
-        max_bead_in_cond - 1,
-        n_beads,
-        L,
-        alpha,
-        gamma,
-        nu,
-        kappa,
-        bd=b,
-    )
-    energy_diff = full_free_energy - free_energy_minus_bead
 
     # Get diffusion constant (This seems to be off by a factor of 4)
-    D = 2 * b * b  # 2x a single condensate
+    D =  b * b  # 2x a single condensate
 
     # Rescale
     x = x_sep / (2.0 * max_sep)
