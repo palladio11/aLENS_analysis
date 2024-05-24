@@ -96,7 +96,7 @@ class Cluster:
         main_progs = [cur]
         # Loop over progenitors until you find the first cluster of the branch
         while cur.progenitors:
-            cur = cur.progenitors[0]
+            cur = max(cur.progenitors, key=lambda x: x.mass_hist)
             main_progs += [cur]
         return main_progs
 

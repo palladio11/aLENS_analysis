@@ -590,3 +590,53 @@ def calc_free_energy_two_blobs(
     term2 = 0.25 * kappa * L * L * ((L - (2.0 * Lp)) / (Lp * (L - Lp)))
     term3 = ltot_beads * alpha * nu * bd
     return term1 + term2 - term3
+
+def find_avg_val_arr(time_arr_lst, val_arr_lst, n_timesteps=100):
+    """Find the average value of multiple runs of a Gillespie time trial
+
+    Parameters
+    ----------
+    time_arr_lst : _type_
+        _description_
+    val_arr_lst : _type_
+        _description_
+    n_timesteps : int, optional
+        _description_, by default 100
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    # Calculate an average trajectory plot
+    max_t_lst = [t_arr[-1] for t_arr in time_arr_lst]
+    t_max = np.max(max_t_lst)
+    # Set up average arrays
+    avg_time_arr = np.linspace(0, t_max, n_timesteps+1)
+    avg_val_arr = np.zeros(n_timesteps+1)
+
+    for time_arr, val_arr in zip(time_arr_lst, val_arr_lst):
+        avg_val_arr += np.interp(avg_time_arr, time_arr, val_arr.flatten())
+
+    avg_val_arr /= len(val_arr_lst)
+    return avg_time_arr, avg_val_arr
+
+def one_cond_size_continuous_deriv(t, state, nu, gamma, alpha, kappa, L, Lc, b, beta):
+    dAdl = two_cond_free_energy_deriv(state, 0, L, Lc, alpha, gamma, nu, kappa)
+    dl = 2.0 * b * (np.exp(-beta * b * dAdl) - 1.0)
+    return [dl]
+
+def calc_regular_interval_kmc_array(time_arr, arr, tmax, interval):
+    regular_time_arr = np.arange(0, tmax, interval)
+    indices = np.searchsorted(time_arr, regular_time_arr, side='right') - 1
+    return regular_time_arr, arr[indices]
+
+def condensate_msd(com_arr, device='cpu'):
+    tcom_arr = torch.from_numpy(com_arr).to(device)
+    Ttot = com_arr.shape[-1]
+    msd = torch.zeros(com_arr.shape, device=device)
+    for i in range(1, Ttot):
+        diff = tcom_arr[:,i:] - tcom_arr[:,:-i]
+        msd[:,i] = torch.pow(diff,2).mean(dim=-1)
+
+    return msd
