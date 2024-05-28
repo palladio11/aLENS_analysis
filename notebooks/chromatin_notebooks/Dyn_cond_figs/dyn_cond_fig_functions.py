@@ -81,14 +81,14 @@ plt.rcParams["image.cmap"] = "YlOrRd"
 
 
 def plot_confidence_int(
-    ax, time_arr, mean, std_dev, num_runs=12, color="b", ci=0.95, label="Mean"
+    ax, time_arr, mean, std_dev, num_runs=12, color="b", ci=0.95, label="Mean", linestyle = '-',
 ):
     degrees_freedom = num_runs - 1
     confidence_interval = (
         stats.t.ppf((1 + ci) / 2.0, degrees_freedom) * std_dev / np.sqrt(num_runs)
     )
 
-    _ = ax.plot(time_arr, mean, label=label, color=color)
+    _ = ax.plot(time_arr, mean, label=label, color=color, linestyle=linestyle)
     _ = ax.fill_between(
         time_arr,
         mean - confidence_interval,
@@ -640,3 +640,19 @@ def condensate_msd(com_arr, device='cpu'):
         msd[:,i] = torch.pow(diff,2).mean(dim=-1)
 
     return msd
+
+def mean_of_arrays(arrays):
+    # Find the maximum length of the arrays
+    max_length = max(arr.shape[0] for arr in arrays)
+
+    # Create an array of np.nan values with shape (number of arrays, max length)
+    padded_arrays = np.full((len(arrays), max_length), np.nan)
+
+    # Replace the first n elements of each row with the values from the corresponding array
+    for i, arr in enumerate(arrays):
+        padded_arrays[i, :arr.shape[0]] = arr
+
+    # Compute the mean along the first axis, ignoring np.nan values
+    mean = np.nanmean(padded_arrays, axis=0)
+
+    return mean
