@@ -2,8 +2,8 @@
 
 """@package docstring
 File: read_func.py
-Author: Adam Lamson
-Email: alamson@flatironinstitute.org
+Author: Adam Lamson, changes to read_sylinder_data (and protein) by Julian Schiedel
+Email: alamson@flatironinstitute.org, j.schiedel@campus.lmu.de
 Description:
 """
 import h5py
@@ -18,6 +18,8 @@ from tqdm import tqdm
 from .objects import filament, protein, con_block
 from .runlog_funcs import get_walltime
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
+
 
 
 def get_file_number(path):
@@ -157,62 +159,93 @@ def read_time(fpaths, h5_data):
 def read_sylinder_data(syl_paths, posit_grp):
     """!Read in data from all tubule files
 
-    @param tubule_fnames: List of tubule posit file names
-    @param posit_grp: HDF5 position data gropu
+    @param syl_paths: List of tubule posit file paths
+    @param posit_grp: HDF5 position data group
     @return: HDF5 data set containing tubule data
-
     """
     nframes = len(syl_paths)
+    
     # Get number of tubules
     with syl_paths[0].open('r') as sp:
         n_syl = int(sp.readline())
+    
     # Create dataset for MT info
-    sy_dset = posit_grp.create_dataset('sylinders',
-                                       shape=(n_syl, 9, nframes))
+    sy_dset = posit_grp.create_dataset('sylinders', shape=(n_syl, 9, nframes))
     sy_dset.attrs['n_yslinders'] = n_syl
     sy_dset.attrs['axis dimensions'] = ['sylinders', 'state', 'frame']
-    # Set tubule attribute: names of columns
     sy_dset.attrs['column labels'] = ['gid', 'radius',
                                       'minus pos x', 'minus pos y', 'minus pos z',
                                       'plus pos x', 'plus pos y', 'plus pos z',
                                       'group', ]
-    for frame, syl_path in tqdm(enumerate(syl_paths), total=len(syl_paths), disable=True):
+
+    def process_frame(frame_data):
+        frame, syl_path = frame_data
         filaments = read_dat_sylinder(syl_path)
-        data_arr = [fil.get_dat()
-                    for fil in filaments if (fil.fil_type == 'C' or fil.fil_type == 'S')]
-        sy_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
+        data_arr = [fil.get_dat() for fil in filaments if (fil.fil_type == 'C' or fil.fil_type == 'S')]
+        return frame, np.asarray(data_arr, dtype='f8')
+    
+    # Use ThreadPoolExecutor for parallel I/O operations
+    with ThreadPoolExecutor() as executor:
+        results = list(tqdm(executor.map(process_frame, enumerate(syl_paths)), total=nframes, disable=True))
+    
+    # Store the results in the dataset
+    for frame, data in results:
+        sy_dset[:, :, frame] = data
+
+    # Original code but as the for loop is not parallelized, it can be really slow
+    # for frame, syl_path in tqdm(enumerate(syl_paths), total=len(syl_paths), disable=True):
+    #     filaments = read_dat_sylinder(syl_path)
+    #     data_arr = [fil.get_dat()
+    #                 for fil in filaments if (fil.fil_type == 'C' or fil.fil_type == 'S')]
+    #     sy_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
+
     return sy_dset
 
 
 def read_protein_data(xlp_paths, posit_grp):
     """!Read in data from all protein files
 
-    @param protein_fnames: List of protein posit file names
+    @param xlp_paths: List of protein posit file paths
     @param posit_grp: HDF5 position data group
     @return: HDF5 data set containing protein data
-
     """
     nframes = len(xlp_paths)
+    
+    # Get number of proteins from the first file
     with xlp_paths[0].open(mode='r') as xp:
         nproteins = int(xp.readline())
 
-    # Create dataset for protein info (input shape)
+    # Create dataset for protein info
     protein_dset = posit_grp.create_dataset('proteins',
-                                            shape=(nproteins, 10, nframes),
-                                            )
-    # Set protein attribute: names of columns
+                                            shape=(nproteins, 10, nframes))
     protein_dset.attrs['nproteins'] = nproteins
     protein_dset.attrs['axis dimensions'] = ['protein', 'state', 'frame']
     protein_dset.attrs['column labels'] = ['gid', 'tag',
                                            'end1 pos x', 'end1 pos y', 'end1 pos z',
                                            'end2 pos x', 'end2 pos y', 'end2 pos z',
                                            'end1 bindID', 'end2 bindID']
-    # Loop over files adding to h5_data
-    for frame, xlp_path in tqdm(enumerate(xlp_paths), total=len(xlp_paths), disable=True):
-        # for frame, xlp_path in enumerate(xlp_paths):
+
+    def process_frame(frame_data):
+        frame, xlp_path = frame_data
         xlps = read_dat_xlp(xlp_path)
         data_arr = [p.get_dat() for p in xlps]
-        protein_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
+        return frame, np.asarray(data_arr, dtype='f8')
+    
+    # Use ThreadPoolExecutor for parallel I/O operations
+    with ThreadPoolExecutor() as executor:
+        results = list(tqdm(executor.map(process_frame, enumerate(xlp_paths)), total=nframes, disable=True))
+    
+    # Store the results in the dataset
+    for frame, data in results:
+        protein_dset[:, :, frame] = data
+    
+    # Original code but as the for loop is not parallelized, it can be really slow
+    # # Loop over files adding to h5_data
+    # for frame, xlp_path in tqdm(enumerate(xlp_paths), total=len(xlp_paths), disable=True):
+    #     # for frame, xlp_path in enumerate(xlp_paths):
+    #     xlps = read_dat_xlp(xlp_path)
+    #     data_arr = [p.get_dat() for p in xlps]
+    #     protein_dset[:, :, frame] = np.asarray(data_arr, dtype='f8')
 
     return protein_dset
 
@@ -326,7 +359,7 @@ def convert_dat_to_hdf(fname="raw_data.h5", path=Path('.'), store_stress=False):
         # Make protein data
         xlp_dset = read_protein_data(xlp_dat_paths, posit_grp)
         t3 = time.time()
-        print(f"Made protin data set in {t3-t2} seconds.")
+        print(f"Made protein data set in {t3-t2} seconds.")
 
         # Make stress data
         # if not is_zip:
